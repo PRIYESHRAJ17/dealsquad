@@ -64,6 +64,10 @@ export function Header({
               <span className="text-lg sm:text-xl font-black tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 bg-clip-text text-transparent">
                 DealSquad
               </span>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live
+              </span>
             </div>
             <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 -mt-0.5">
               Flipkart BBD • Amazon GIF • Myntra BFF • {totalTracked} Deals

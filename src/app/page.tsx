@@ -95,14 +95,17 @@ export default function DashboardPage() {
       document.documentElement.classList.add('dark');
     }
 
-    const fetchData = async () => {
+    const fetchLatestData = async (isInitial = false) => {
       try {
+        const timestamp = Date.now();
         const [membersRes, itemsRes, salesRes, activitiesRes] = await Promise.all([
-          fetch('/api/members'),
-          fetch('/api/items'),
-          fetch('/api/sale-events'),
-          fetch('/api/activities'),
+          fetch(`/api/members?_t=${timestamp}`, { cache: 'no-store' }),
+          fetch(`/api/items?_t=${timestamp}`, { cache: 'no-store' }),
+          fetch(`/api/sale-events?_t=${timestamp}`, { cache: 'no-store' }),
+          fetch(`/api/activities?_t=${timestamp}`, { cache: 'no-store' }),
         ]);
+
+        if (!membersRes.ok || !itemsRes.ok) return;
 
         const membersData = await membersRes.json();
         const itemsData = await itemsRes.json();
@@ -112,38 +115,60 @@ export default function DashboardPage() {
         const fetchedMembers = membersData.members || [];
         setMembers(fetchedMembers);
         setItems(itemsData.items || []);
-        setSaleEvents(salesData.saleEvents || []);
-        setActivities(activitiesData.activities || []);
+        if (salesData.saleEvents) setSaleEvents(salesData.saleEvents);
+        if (activitiesData.activities) setActivities(activitiesData.activities);
 
-        // DEVICE REMEMBERING CHECK:
-        // If device has saved authentication, restore instantly without login
-        const savedAuthRaw = localStorage.getItem('dealsquad_device_auth_member');
-        if (savedAuthRaw) {
-          try {
-            const parsed = JSON.parse(savedAuthRaw);
-            const verified = fetchedMembers.find((m: Member) => m.id === parsed.id);
-            if (verified) {
-              setCurrentMember(verified);
-              return;
+        if (isInitial) {
+          // DEVICE REMEMBERING CHECK:
+          // If device has saved authentication, restore instantly without login
+          const savedAuthRaw = localStorage.getItem('dealsquad_device_auth_member');
+          if (savedAuthRaw) {
+            try {
+              const parsed = JSON.parse(savedAuthRaw);
+              const verified = fetchedMembers.find((m: Member) => m.id === parsed.id);
+              if (verified) {
+                setCurrentMember(verified);
+                return;
+              }
+            } catch {
+              // ignore
             }
-          } catch {
-            // ignore
+          }
+
+          // Fallback to member-3 (Priyesh) or first member, but show switch easily
+          if (fetchedMembers.length > 0) {
+            const defaultMem = fetchedMembers.find((m: Member) => m.name === 'Priyesh') || fetchedMembers[0];
+            setCurrentMember(defaultMem);
           }
         }
-
-        // Fallback to member-3 (Priyesh) or first member, but show switch easily
-        if (fetchedMembers.length > 0) {
-          const defaultMem = fetchedMembers.find((m: Member) => m.name === 'Priyesh') || fetchedMembers[0];
-          setCurrentMember(defaultMem);
-        }
       } catch (err) {
-        console.error('Initial data fetch failed:', err);
+        console.error('Data sync failed:', err);
       } finally {
-        setLoading(false);
+        if (isInitial) setLoading(false);
       }
     };
 
-    fetchData();
+    fetchLatestData(true);
+
+    // LIVE UPDATE SYNC: Poll every 4 seconds when tab is active + immediate sync on tab focus
+    const syncInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchLatestData(false);
+      }
+    }, 4000);
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchLatestData(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(syncInterval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   // Member Authentication & Device Remembering
