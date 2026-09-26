@@ -235,27 +235,43 @@ export function ItemDetailModal({
                   )}
                 </div>
 
-                {/* 30-Day Historical Average & Real Rufus Calibration Box */}
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2.5">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <TrendingDown className="w-4 h-4 text-indigo-500 shrink-0" />
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">
-                        30-Day Historical Average:
-                      </span>
-                      <span className="text-sm font-black text-slate-900 dark:text-white">
-                        ₹{(item.averagePrice || item.currentPrice).toLocaleString('en-IN')}
-                      </span>
+                {/* 3-Price Snapshot Matrix (User req: Show lowest & average & current price all 3) */}
+                <div className="p-3 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 sm:p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs">
+                      <div className="text-[10px] uppercase font-extrabold text-slate-500 dark:text-slate-400">Current</div>
+                      <div className="text-sm sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                        ₹{item.currentPrice.toLocaleString('en-IN')}
+                      </div>
                     </div>
 
+                    <div className="p-2 sm:p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 shadow-2xs">
+                      <div className="text-[10px] uppercase font-extrabold text-indigo-600 dark:text-indigo-400">30D Avg</div>
+                      <div className="text-sm sm:text-lg font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+                        ₹{(item.averagePrice || item.currentPrice).toLocaleString('en-IN')}
+                      </div>
+                    </div>
+
+                    <div className="p-2 sm:p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/60 shadow-2xs">
+                      <div className="text-[10px] uppercase font-extrabold text-emerald-600 dark:text-emerald-400">Lowest / ATL</div>
+                      <div className="text-sm sm:text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        ₹{item.lowestPrice.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200 dark:border-slate-700/50">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                      Rufus AI / Keepa Historical Calibration:
+                    </span>
                     <button
                       type="button"
                       onClick={() => setShowCalibrate(!showCalibrate)}
-                      className="px-2.5 py-1 rounded-xl text-[11px] font-bold border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all flex items-center gap-1 cursor-pointer"
-                      title="Calibrate using Rufus AI or Price History chart"
+                      className="px-2.5 py-1 rounded-xl text-[11px] font-bold border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all cursor-pointer flex items-center gap-1"
+                      title="Adjust Current, Average, or Lowest Prices to match Rufus AI"
                     >
-                      <Sparkles className="w-3 h-3 text-indigo-500" />
-                      <span>{showCalibrate ? 'Close Calibration' : '⚙️ Calibrate Rufus / True ATL'}</span>
+                      <span>{showCalibrate ? 'Close' : '⚙️ Match Rufus / True ATL'}</span>
                     </button>
                   </div>
 
@@ -437,6 +453,7 @@ export function ItemDetailModal({
               lowestPrice={item.lowestPrice}
               highestPrice={item.highestPrice}
               targetPrice={item.targetPrice}
+              averagePrice={item.averagePrice || item.currentPrice}
             />
           </div>
 

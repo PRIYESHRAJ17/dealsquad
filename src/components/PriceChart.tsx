@@ -11,6 +11,7 @@ interface PriceChartProps {
   lowestPrice: number;
   highestPrice: number;
   targetPrice?: number;
+  averagePrice?: number;
 }
 
 export function PriceChart({
@@ -20,6 +21,7 @@ export function PriceChart({
   lowestPrice,
   highestPrice,
   targetPrice,
+  averagePrice,
 }: PriceChartProps) {
   const [hoveredPoint, setHoveredPoint] = useState<{ point: PricePoint; x: number; y: number } | null>(null);
 
@@ -101,16 +103,23 @@ export function PriceChart({
   const lowestY = height - paddingY - ((lowestPrice - minVal) / priceRange) * (height - paddingY * 2);
 
   // Calculations
-  const hasMultipleChecks = points.length > 1;
-  const initialPrice = points[0].price;
+  const hasMultipleChecks = sortedPoints.length > 1;
+  const initialPrice = sortedPoints[0].price;
   const droppedFromFirst = initialPrice > currentPrice ? Math.round(((initialPrice - currentPrice) / initialPrice) * 100) : 0;
 
-  // Real All-Time Low logic: Only claim ATL if genuine drop from first record or verified ATL
-  const isGenuineAllTimeLow = (hasMultipleChecks || lowestPrice < currentPrice) && currentPrice <= lowestPrice && droppedFromFirst > 0;
+  // Real All-Time Low logic:
+  // Genuine ATL ONLY if multiple checks exist AND current price dropped below initial price,
+  // OR if a true historical low was reached from a higher price.
+  const isGenuineAllTimeLow = hasMultipleChecks && droppedFromFirst > 0 && currentPrice <= lowestPrice;
   const isAboveLowest = currentPrice > lowestPrice;
   const diffAboveLowest = currentPrice - lowestPrice;
   const discountFromMrp = originalPrice > currentPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0;
   const isTargetMet = targetPrice && currentPrice <= targetPrice;
+
+  // Resolved average price (User req: show lowest & average & current price all 3)
+  const displayAverage = averagePrice && averagePrice > 0
+    ? averagePrice
+    : Math.round(allPrices.reduce((sum, val) => sum + val, 0) / allPrices.length);
 
   return (
     <div className="w-full">
@@ -126,7 +135,7 @@ export function PriceChart({
         {!hasMultipleChecks && !isAboveLowest && (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
             <Clock className="w-3.5 h-3.5 text-blue-500" />
-            Initial Tracked Price
+            📍 Initial Tracked Price
           </span>
         )}
 
@@ -315,28 +324,41 @@ export function PriceChart({
         )}
       </div>
 
-      {/* Footer Stats Summary */}
-      <div className="grid grid-cols-3 gap-2 mt-3 text-center">
-        <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-          <div className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">Current Price</div>
-          <div className="text-sm font-bold text-slate-900 dark:text-white">
+      {/* 3 Price Metrics: Current, 30-Day Average, and Lowest / ATL (User Req: Show all 3) */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-2.5 mt-3 text-center">
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+          <div className="text-[10px] sm:text-xs uppercase font-extrabold text-slate-500 dark:text-slate-400">
+            Current Price
+          </div>
+          <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5">
             ₹{currentPrice.toLocaleString('en-IN')}
           </div>
         </div>
-        <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-          <div className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">
-            {hasMultipleChecks || lowestPrice < currentPrice ? 'All-Time Low' : 'Tracked Low'}
+
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 shadow-2xs">
+          <div className="text-[10px] sm:text-xs uppercase font-extrabold text-indigo-600 dark:text-indigo-400">
+            30-Day Average
           </div>
-          <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+          <div className="text-sm sm:text-base font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+            ₹{displayAverage.toLocaleString('en-IN')}
+          </div>
+        </div>
+
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/60 shadow-2xs">
+          <div className="text-[10px] sm:text-xs uppercase font-extrabold text-emerald-600 dark:text-emerald-400">
+            Lowest / ATL
+          </div>
+          <div className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
             ₹{lowestPrice.toLocaleString('en-IN')}
           </div>
         </div>
-        <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-          <div className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">Tracked Records</div>
-          <div className="text-sm font-bold text-slate-900 dark:text-white">
-            {priceHistory.length} Checks
-          </div>
-        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 mt-2">
+        <span>📊 Tracked Records: {priceHistory.length} checks</span>
+        {currentPrice > lowestPrice && (
+          <span className="text-amber-500 font-semibold">+₹{(currentPrice - lowestPrice).toLocaleString('en-IN')} above lowest</span>
+        )}
       </div>
     </div>
   );

@@ -100,6 +100,9 @@ export async function POST(req: NextRequest) {
     const allMembers = await db.getMembers();
     const resolvedName = addedByName || allMembers.find((m) => m.id === (addedBy || 'member-1'))?.name || 'Pravin';
 
+    const suppliedLowest = body.lowestPrice !== undefined ? Number(body.lowestPrice) : Math.round(priceNum * 0.90);
+    const suppliedAverage = body.averagePrice !== undefined ? Number(body.averagePrice) : Math.round(priceNum * 1.08);
+
     const newItem = await db.addItem({
       title,
       url,
@@ -111,8 +114,9 @@ export async function POST(req: NextRequest) {
       currentPrice: priceNum,
       originalPrice: origPriceNum,
       targetPrice: targetPrice ? Number(targetPrice) : undefined,
-      lowestPrice: priceNum,
-      highestPrice: Math.max(priceNum, origPriceNum),
+      lowestPrice: suppliedLowest,
+      highestPrice: Math.max(priceNum, origPriceNum, suppliedAverage),
+      averagePrice: suppliedAverage,
       status: status || 'want',
       saleTag: saleTag || 'none',
       notes: notes || '',

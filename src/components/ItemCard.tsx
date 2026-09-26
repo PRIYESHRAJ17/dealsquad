@@ -195,7 +195,7 @@ export function ItemCard({
             </div>
           )}
 
-          {/* ADDED BY & 30-DAY AVERAGE BAR (User req #1 & #2: No DP, live average price) */}
+          {/* ADDED BY TAG & DEAL STATUS */}
           <div className="flex items-center justify-between gap-2 mb-2">
             <span
               className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border"
@@ -208,17 +208,43 @@ export function ItemCard({
               Added by {ownerName}
             </span>
 
-            {/* LIVE AVERAGE PRICE */}
-            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <TrendingDown className="w-3 h-3 text-indigo-500" />
-              <span>Avg: ₹{avgPrice.toLocaleString('en-IN')}</span>
-            </div>
+            {item.currentPrice > item.lowestPrice ? (
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                +₹{(item.currentPrice - item.lowestPrice).toLocaleString('en-IN')} above low
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                At Tracked Low
+              </span>
+            )}
           </div>
 
           {/* Product Title */}
           <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white line-clamp-2 mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
             {item.title}
           </h3>
+
+          {/* 3-PRICE SUMMARY BAR: Current, 30-Day Average, and Lowest / ATL (User Req: Show all 3) */}
+          <div className="grid grid-cols-3 gap-1.5 p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-center mb-2.5">
+            <div>
+              <div className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400">Current</div>
+              <div className="text-xs sm:text-sm font-black text-slate-900 dark:text-white mt-0.5">
+                ₹{item.currentPrice.toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div className="border-x border-slate-200 dark:border-slate-700/60">
+              <div className="text-[9px] uppercase font-bold text-indigo-600 dark:text-indigo-400">30D Avg</div>
+              <div className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+                ₹{avgPrice.toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400">Lowest / ATL</div>
+              <div className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                ₹{item.lowestPrice.toLocaleString('en-IN')}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Action Toolbar: Compare, WhatsApp, In Cart, History */}
