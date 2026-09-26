@@ -13,3 +13,13 @@ export async function GET() {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function DELETE() {
+  try {
+    await db.clearActivities();
+    return NextResponse.json({ success: true, activities: [] });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error clearing activities';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

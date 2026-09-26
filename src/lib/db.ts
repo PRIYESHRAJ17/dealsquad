@@ -145,52 +145,7 @@ export const INITIAL_SALE_EVENTS: SaleEvent[] = [
   },
 ];
 
-export const INITIAL_ACTIVITIES: ActivityLog[] = [
-  {
-    id: 'act-1',
-    memberId: 'member-3',
-    memberName: 'Priyesh',
-    memberAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-    action: 'added_item',
-    itemTitle: 'Apple MacBook Air M3 (16GB RAM)',
-    itemId: 'item-5',
-    details: 'Added MacBook Air M3 to Wishlist (GIF target)',
-    timestamp: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-  },
-  {
-    id: 'act-2',
-    memberId: 'member-1',
-    memberName: 'Pravin',
-    memberAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-    action: 'cart_toggle',
-    itemTitle: 'Apple iPhone 16 (128 GB)',
-    itemId: 'item-2',
-    details: 'Added iPhone 16 into Common Cart for BBD group buy',
-    timestamp: new Date(Date.now() - 1000 * 60 * 50).toISOString(),
-  },
-  {
-    id: 'act-3',
-    memberId: 'member-2',
-    memberName: 'Sweta',
-    memberAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
-    action: 'comment',
-    itemTitle: 'Nike Air Jordan 1 Low Retro',
-    itemId: 'item-3',
-    details: 'Spotted price ₹1,504 cheaper on Myntra BFF!',
-    timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-  },
-  {
-    id: 'act-4',
-    memberId: 'member-4',
-    memberName: 'Shreyash',
-    memberAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
-    action: 'price_drop',
-    itemTitle: 'Sony WH-1000XM5 Headphones',
-    itemId: 'item-1',
-    details: 'Dropped to ₹24,990 (All-Time Low hit!)',
-    timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-  },
-];
+export const INITIAL_ACTIVITIES: ActivityLog[] = [];
 
 export const INITIAL_ITEMS: WishlistItem[] = [
   {
@@ -648,7 +603,26 @@ class Database {
   // --- Activity Log Operations ---
   public async getActivities(): Promise<ActivityLog[]> {
     const data = await this.getData();
-    return data.activities || [];
+    const mockTitles = ['MacBook Air M3', 'iPhone 16', 'Nike Air Jordan', 'Sony WH-1000XM5'];
+    const valid = (data.activities || []).filter(
+      (a) =>
+        !mockTitles.some((t) => a.itemTitle?.toLowerCase().includes(t.toLowerCase())) &&
+        a.id !== 'act-1' &&
+        a.id !== 'act-2' &&
+        a.id !== 'act-3' &&
+        a.id !== 'act-4'
+    );
+    if (valid.length !== (data.activities || []).length) {
+      data.activities = valid;
+      await this.saveData(data);
+    }
+    return valid;
+  }
+
+  public async clearActivities(): Promise<void> {
+    const data = await this.getData();
+    data.activities = [];
+    await this.saveData(data);
   }
 
   public async logActivity(activity: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<ActivityLog> {

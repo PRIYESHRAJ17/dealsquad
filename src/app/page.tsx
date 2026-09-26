@@ -511,6 +511,19 @@ export default function DashboardPage() {
     }
   };
 
+  // Clear All Activities
+  const handleClearActivities = async () => {
+    try {
+      const res = await fetch('/api/activities', { method: 'DELETE' });
+      if (res.ok) {
+        setActivities([]);
+        showToast('Activity Log Cleared', 'All notifications and activity cleared', 'info');
+      }
+    } catch (err) {
+      console.error('Error clearing activities:', err);
+    }
+  };
+
   // Refresh All Prices
   const handleRefreshAll = async () => {
     setRefreshing(true);
@@ -908,6 +921,7 @@ export default function DashboardPage() {
         onClose={() => setShowActivityDrawer(false)}
         activities={activities}
         members={members}
+        onClearActivities={handleClearActivities}
         onOpenItem={(id) => {
           const found = items.find((i) => i.id === id);
           if (found) setActiveItem(found);

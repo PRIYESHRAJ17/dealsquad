@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ActivityLog, Member, WishlistItem } from '@/types';
-import { X, Sparkles, TrendingDown, ShoppingBag, MessageSquare, Plus, CheckCircle, Bell } from 'lucide-react';
+import { X, Sparkles, TrendingDown, ShoppingBag, MessageSquare, Plus, CheckCircle, Bell, Trash2 } from 'lucide-react';
 
 interface ActivityFeedDrawerProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface ActivityFeedDrawerProps {
   activities: ActivityLog[];
   members: Member[];
   onOpenItem: (itemId: string) => void;
+  onClearActivities?: () => void;
 }
 
 export function ActivityFeedDrawer({
@@ -18,6 +19,7 @@ export function ActivityFeedDrawer({
   activities,
   members,
   onOpenItem,
+  onClearActivities,
 }: ActivityFeedDrawerProps) {
   if (!isOpen) return null;
 
@@ -42,9 +44,9 @@ export function ActivityFeedDrawer({
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/60 backdrop-blur-xs animate-fade-in">
       <div className="relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col">
         {/* Drawer Header */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shrink-0">
               <Bell className="w-4 h-4" />
             </div>
             <div>
@@ -53,13 +55,27 @@ export function ActivityFeedDrawer({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {activities.length > 0 && onClearActivities && (
+              <button
+                type="button"
+                onClick={onClearActivities}
+                title="Clear all activities"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-all cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Clear All</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Activities List */}
