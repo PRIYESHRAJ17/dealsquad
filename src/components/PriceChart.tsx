@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { PricePoint } from '@/types';
-import { TrendingDown, TrendingUp, AlertCircle, ShieldAlert, CheckCircle, Sparkles } from 'lucide-react';
+import { TrendingDown, TrendingUp, AlertCircle, ShieldAlert, CheckCircle, Sparkles, Clock } from 'lucide-react';
 
 interface PriceChartProps {
   priceHistory: PricePoint[];
@@ -101,20 +101,38 @@ export function PriceChart({
   const lowestY = height - paddingY - ((lowestPrice - minVal) / priceRange) * (height - paddingY * 2);
 
   // Calculations
-  const isAllTimeLow = currentPrice <= lowestPrice;
-  const discountFromMrp = originalPrice > currentPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0;
+  const hasMultipleChecks = points.length > 1;
   const initialPrice = points[0].price;
   const droppedFromFirst = initialPrice > currentPrice ? Math.round(((initialPrice - currentPrice) / initialPrice) * 100) : 0;
+
+  // Real All-Time Low logic: Only claim ATL if genuine drop from first record or verified ATL
+  const isGenuineAllTimeLow = (hasMultipleChecks || lowestPrice < currentPrice) && currentPrice <= lowestPrice && droppedFromFirst > 0;
+  const isAboveLowest = currentPrice > lowestPrice;
+  const diffAboveLowest = currentPrice - lowestPrice;
+  const discountFromMrp = originalPrice > currentPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0;
   const isTargetMet = targetPrice && currentPrice <= targetPrice;
 
   return (
     <div className="w-full">
       {/* Top Indicators / Badges */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        {isAllTimeLow && (
+        {isGenuineAllTimeLow && (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
             <Sparkles className="w-3.5 h-3.5" />
-            🔥 All-Time Low (ATL)
+            🔥 Genuine All-Time Low (ATL)
+          </span>
+        )}
+
+        {!hasMultipleChecks && !isAboveLowest && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <Clock className="w-3.5 h-3.5 text-blue-500" />
+            Initial Tracked Price
+          </span>
+        )}
+
+        {isAboveLowest && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+            +₹{diffAboveLowest.toLocaleString('en-IN')} above lowest (₹{lowestPrice.toLocaleString('en-IN')})
           </span>
         )}
 
@@ -306,7 +324,9 @@ export function PriceChart({
           </div>
         </div>
         <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-          <div className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">All-Time Low</div>
+          <div className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">
+            {hasMultipleChecks || lowestPrice < currentPrice ? 'All-Time Low' : 'Tracked Low'}
+          </div>
           <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
             ₹{lowestPrice.toLocaleString('en-IN')}
           </div>

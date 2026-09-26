@@ -438,6 +438,65 @@ export default function DashboardPage() {
     }
   };
 
+  // Calibrate Rufus / True Historical Prices
+  const handleCalibratePrices = async (
+    itemId: string,
+    data: { lowestPrice: number; averagePrice: number; highestPrice: number }
+  ) => {
+    try {
+      const item = items.find((i) => i.id === itemId);
+      if (!item) return;
+
+      const nowIso = new Date().toISOString();
+      const calibratedHistory = [
+        {
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 180).toISOString(),
+          price: data.lowestPrice,
+          originalPrice: item.originalPrice,
+          note: 'True 1-Year / All-Time Low',
+        },
+        {
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
+          price: data.highestPrice,
+          originalPrice: item.originalPrice,
+          note: '30-Day Peak',
+        },
+        {
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
+          price: data.averagePrice,
+          originalPrice: item.originalPrice,
+          note: '30-Day Average',
+        },
+        {
+          timestamp: nowIso,
+          price: item.currentPrice,
+          originalPrice: item.originalPrice,
+          note: 'Current Price',
+        },
+      ];
+
+      const res = await fetch(`/api/items/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lowestPrice: data.lowestPrice,
+          highestPrice: Math.max(data.highestPrice, item.currentPrice),
+          averagePrice: data.averagePrice,
+          priceHistory: calibratedHistory,
+        }),
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setItems((prev) => prev.map((i) => (i.id === itemId ? result.item : i)));
+        if (activeItem && activeItem.id === itemId) setActiveItem(result.item);
+        showToast('Calibrated with Rufus', 'True low and 30-day average updated!', 'success');
+      }
+    } catch (err) {
+      console.error('Error calibrating item prices:', err);
+    }
+  };
+
   // Delete Item
   const handleDeleteItem = async (itemId: string) => {
     try {
@@ -812,6 +871,7 @@ export default function DashboardPage() {
         onToggleReaction={handleToggleReaction}
         onSimulatePriceDrop={handleSimulatePriceDrop}
         onAddPricePoint={handleAddPricePoint}
+        onCalibratePrices={handleCalibratePrices}
         onDeleteItem={handleDeleteItem}
       />
 

@@ -91,14 +91,13 @@ export const INITIAL_SALE_EVENTS: SaleEvent[] = [
     badge: 'BBD Mega Drop',
     color: 'from-blue-600 to-indigo-800',
     accentColor: '#2563eb',
-    startDate: new Date(now.getTime() + 1000 * 60 * 60 * 32).toISOString(),
-    endDate: new Date(now.getTime() + 1000 * 60 * 60 * 180).toISOString(),
+    startDate: '2026-10-07T00:00:00+05:30', // Oct 7 Plus Early Access
+    endDate: '2026-10-15T23:59:59+05:30',
     bannerImage: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&auto=format&fit=crop&q=80',
-    description: 'Up to 80% off on mobiles, laptops, electronics with Axis & ICICI bank instant 10% discount.',
+    description: 'Plus Early Access Oct 7 (Midnight). Open Sale Oct 8 with Axis & ICICI 10% instant discount.',
     phases: [
-      { name: 'Phase 1: VIP Plus Early Access', tagline: 'Midnight 12:00 AM unlocks for Plus members', startDate: new Date(now.getTime() + 1000 * 60 * 60 * 32).toISOString(), endDate: new Date(now.getTime() + 1000 * 60 * 60 * 56).toISOString(), status: 'upcoming', isVipOnly: true },
-      { name: 'Phase 2: Open Sale & Rush Hours', tagline: 'All deals live + ₹1,750 Axis instant card discount', startDate: new Date(now.getTime() + 1000 * 60 * 60 * 56).toISOString(), endDate: new Date(now.getTime() + 1000 * 60 * 60 * 120).toISOString(), status: 'upcoming' },
-      { name: 'Phase 3: Maha Price Drop Flash', tagline: '12 AM, 8 AM, 4 PM limited lightning deals', startDate: new Date(now.getTime() + 1000 * 60 * 60 * 120).toISOString(), endDate: new Date(now.getTime() + 1000 * 60 * 60 * 180).toISOString(), status: 'upcoming' },
+      { name: 'Phase 1: VIP Plus Early Access', tagline: 'Midnight 12:00 AM (Oct 7) unlocks for Plus members', startDate: '2026-10-07T00:00:00+05:30', endDate: '2026-10-07T23:59:59+05:30', status: 'upcoming', isVipOnly: true },
+      { name: 'Phase 2: Open Sale & Rush Hours', tagline: 'Oct 8 Open Sale + ₹1,750 Axis/ICICI instant card discount', startDate: '2026-10-08T00:00:00+05:30', endDate: '2026-10-15T23:59:59+05:30', status: 'upcoming' },
     ],
   },
   {
@@ -109,13 +108,13 @@ export const INITIAL_SALE_EVENTS: SaleEvent[] = [
     badge: 'GIF Prime Deals',
     color: 'from-amber-600 to-orange-700',
     accentColor: '#ea580c',
-    startDate: new Date(now.getTime() + 1000 * 60 * 60 * 44).toISOString(),
-    endDate: new Date(now.getTime() + 1000 * 60 * 60 * 192).toISOString(),
+    startDate: '2026-10-07T00:00:00+05:30', // Oct 7 Prime Early Access
+    endDate: '2026-10-15T23:59:59+05:30',
     bannerImage: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1200&auto=format&fit=crop&q=80',
-    description: 'Prime Early Access, SBI card 10% instant discount, exchange bonus, and no-cost EMI.',
+    description: 'Prime Early Access Oct 7 (Midnight). Open Sale Oct 8 with SBI Card 10% instant discount.',
     phases: [
-      { name: 'Phase 1: Prime Early Access (24 Hours)', tagline: 'Prime members get first dibs on lightning deals', startDate: new Date(now.getTime() + 1000 * 60 * 60 * 44).toISOString(), endDate: new Date(now.getTime() + 1000 * 60 * 60 * 68).toISOString(), status: 'upcoming', isVipOnly: true },
-      { name: 'Phase 2: Festival Blockbusters', tagline: 'SBI 10% Instant Off on Electronics & Appliances', startDate: new Date(now.getTime() + 1000 * 60 * 60 * 68).toISOString(), endDate: new Date(now.getTime() + 1000 * 60 * 60 * 140).toISOString(), status: 'upcoming' },
+      { name: 'Phase 1: Prime Early Access (24 Hours)', tagline: 'Prime members get first access on midnight Oct 7', startDate: '2026-10-07T00:00:00+05:30', endDate: '2026-10-07T23:59:59+05:30', status: 'upcoming', isVipOnly: true },
+      { name: 'Phase 2: Festival Blockbusters Open Sale', tagline: 'Oct 8 Open Sale + SBI 10% Instant Off', startDate: '2026-10-08T00:00:00+05:30', endDate: '2026-10-15T23:59:59+05:30', status: 'upcoming' },
     ],
   },
   {
@@ -126,10 +125,10 @@ export const INITIAL_SALE_EVENTS: SaleEvent[] = [
     badge: 'Myntra BFF',
     color: 'from-pink-600 to-rose-700',
     accentColor: '#e11d48',
-    startDate: new Date(now.getTime() + 1000 * 60 * 60 * 20).toISOString(),
-    endDate: new Date(now.getTime() + 1000 * 60 * 60 * 168).toISOString(),
+    startDate: '2026-10-06T00:00:00+05:30', // Oct 6 VIP Insider Access
+    endDate: '2026-10-14T23:59:59+05:30',
     bannerImage: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&auto=format&fit=crop&q=80',
-    description: 'Flat 50-80% off on Nike, Adidas, Puma, Levi’s, Fossil + Kotak & ICICI 10% instant off.',
+    description: 'VIP Insider Access Oct 6. Open Sale Oct 7 with Kotak & ICICI 10% instant off.',
   },
   {
     id: 'diwali',
@@ -139,8 +138,8 @@ export const INITIAL_SALE_EVENTS: SaleEvent[] = [
     badge: 'Diwali Special',
     color: 'from-purple-600 to-pink-700',
     accentColor: '#9333ea',
-    startDate: new Date(now.getTime() + 1000 * 60 * 60 * 240).toISOString(),
-    endDate: new Date(now.getTime() + 1000 * 60 * 60 * 360).toISOString(),
+    startDate: '2026-10-18T00:00:00+05:30',
+    endDate: '2026-10-25T23:59:59+05:30',
     bannerImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80',
     description: 'Diwali lightning deals and flash drops across gadgets and gifting bundles.',
   },
@@ -980,8 +979,7 @@ class Database {
   }
 
   public async getSaleEvents(): Promise<SaleEvent[]> {
-    const data = await this.getData();
-    return data.saleEvents;
+    return INITIAL_SALE_EVENTS;
   }
 }
 

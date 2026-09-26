@@ -45,28 +45,67 @@ export function SaleCountdown({
   myntraItemsCount,
   totalSavings,
 }: SaleCountdownProps) {
-  const bbdEvent = saleEvents.find((s) => s.id === 'bbd');
-  const gifEvent = saleEvents.find((s) => s.id === 'gif');
-  const myntraEvent = saleEvents.find((s) => s.id === 'myntra_bff');
+  const bbdTarget = '2026-10-07T00:00:00+05:30';
+  const gifTarget = '2026-10-07T00:00:00+05:30';
+  const myntraTarget = '2026-10-06T00:00:00+05:30';
 
-  const [bbdTime, setBbdTime] = useState<TimeRemaining>({ days: 1, hours: 8, minutes: 30, seconds: 45, isStarted: false });
-  const [gifTime, setGifTime] = useState<TimeRemaining>({ days: 1, hours: 20, minutes: 15, seconds: 10, isStarted: false });
-  const [myntraTime, setMyntraTime] = useState<TimeRemaining>({ days: 0, hours: 19, minutes: 45, seconds: 20, isStarted: false });
+  const [currentDateTime, setCurrentDateTime] = useState<Date | null>(null);
+  const [bbdTime, setBbdTime] = useState<TimeRemaining>(() => calculateTimeLeft(bbdTarget));
+  const [gifTime, setGifTime] = useState<TimeRemaining>(() => calculateTimeLeft(gifTarget));
+  const [myntraTime, setMyntraTime] = useState<TimeRemaining>(() => calculateTimeLeft(myntraTarget));
 
   useEffect(() => {
+    setCurrentDateTime(new Date());
     const updateTimes = () => {
-      if (bbdEvent) setBbdTime(calculateTimeLeft(bbdEvent.startDate));
-      if (gifEvent) setGifTime(calculateTimeLeft(gifEvent.startDate));
-      if (myntraEvent) setMyntraTime(calculateTimeLeft(myntraEvent.startDate));
+      setCurrentDateTime(new Date());
+      setBbdTime(calculateTimeLeft(bbdTarget));
+      setGifTime(calculateTimeLeft(gifTarget));
+      setMyntraTime(calculateTimeLeft(myntraTarget));
     };
 
     updateTimes();
     const interval = setInterval(updateTimes, 1000);
     return () => clearInterval(interval);
-  }, [bbdEvent, gifEvent, myntraEvent]);
+  }, []);
 
   return (
     <div className="relative mb-8">
+      {/* Real-time Today Date, Day & Clock Banner */}
+      {currentDateTime && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 px-4 py-2.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 backdrop-blur-md text-xs shadow-xs">
+          <div className="flex items-center gap-2.5 font-bold text-slate-800 dark:text-slate-200 flex-wrap">
+            <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+              <Clock className="w-4 h-4 text-indigo-500" />
+              <span>Today:</span>
+            </span>
+            <span className="font-extrabold text-slate-900 dark:text-white">
+              {currentDateTime.toLocaleDateString('en-IN', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </span>
+            <span className="font-mono text-indigo-600 dark:text-indigo-300 font-extrabold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-[11px]">
+              {currentDateTime.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+              })} IST
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Realtime Sale Countdown
+            </span>
+            <span className="hidden sm:inline">• Early Access Oct 7 • Open Sale Oct 8</span>
+          </div>
+        </div>
+      )}
+
       {/* 3 Major Festival Sales: BBD, GIF, Myntra BFF */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* 1. Flipkart BBD Card */}
@@ -93,8 +132,8 @@ export function SaleCountdown({
               <h3 className="text-lg sm:text-xl font-black tracking-tight text-white mb-0.5">
                 Big Billion Days
               </h3>
-              <p className="text-xs text-blue-100/80 mb-4 line-clamp-1">
-                Axis & ICICI 10% instant discount + exchange boosters.
+              <p className="text-xs text-blue-100/90 mb-3 font-medium">
+                Plus Early Access: <span className="font-bold text-yellow-300">Midnight Oct 7</span> • Open Sale: <span className="font-bold text-white">Oct 8</span>
               </p>
             </div>
 
@@ -157,8 +196,8 @@ export function SaleCountdown({
               <h3 className="text-lg sm:text-xl font-black tracking-tight text-white mb-0.5">
                 Great Indian Festival
               </h3>
-              <p className="text-xs text-orange-100/80 mb-4 line-clamp-1">
-                Prime Early Access + SBI Card 10% instant savings.
+              <p className="text-xs text-orange-100/90 mb-3 font-medium">
+                Prime Early Access: <span className="font-bold text-amber-200">Midnight Oct 7</span> • Open Sale: <span className="font-bold text-white">Oct 8</span>
               </p>
             </div>
 
@@ -210,7 +249,7 @@ export function SaleCountdown({
             <div>
               <div className="flex items-center justify-between gap-1 mb-2">
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white text-pink-950 shadow-xs">
-                  <Sparkles className="w-3 h-3 text-pink-500 fill-pink-500" />
+                  <Sparkles className="w-3.5 h-3.5 text-pink-500 fill-pink-500" />
                   Myntra BFF
                 </span>
                 <span className="text-[10px] font-medium text-pink-100 bg-pink-950/60 px-2 py-0.5 rounded-full border border-pink-400/30">
@@ -221,8 +260,8 @@ export function SaleCountdown({
               <h3 className="text-lg sm:text-xl font-black tracking-tight text-white mb-0.5">
                 Big Fashion Festival
               </h3>
-              <p className="text-xs text-pink-100/80 mb-4 line-clamp-1">
-                50-80% off sneakers, apparel + Kotak & ICICI 10% instant off.
+              <p className="text-xs text-pink-100/90 mb-3 font-medium">
+                VIP Early Access: <span className="font-bold text-pink-200">Midnight Oct 6</span> • Open Sale: <span className="font-bold text-white">Oct 7</span>
               </p>
             </div>
 

@@ -36,6 +36,7 @@ interface ItemDetailModalProps {
   onToggleReaction: (itemId: string, emoji: string) => void;
   onSimulatePriceDrop: (itemId: string, percentage: number) => void;
   onAddPricePoint: (itemId: string, price: number, note?: string) => void;
+  onCalibratePrices?: (itemId: string, data: { lowestPrice: number; averagePrice: number; highestPrice: number }) => void;
   onDeleteItem: (itemId: string) => void;
 }
 
@@ -53,6 +54,7 @@ export function ItemDetailModal({
   onToggleReaction,
   onSimulatePriceDrop,
   onAddPricePoint,
+  onCalibratePrices,
   onDeleteItem,
 }: ItemDetailModalProps) {
   if (!isOpen || !item) return null;
@@ -66,6 +68,27 @@ export function ItemDetailModal({
   const [customPriceNote, setCustomPriceNote] = useState('');
   const [showPriceForm, setShowPriceForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Rufus / True Price Calibration State
+  const [showCalibrate, setShowCalibrate] = useState(false);
+  const [calibratedLowest, setCalibratedLowest] = useState(String(item.lowestPrice || item.currentPrice));
+  const [calibratedAverage, setCalibratedAverage] = useState(String(item.averagePrice || item.currentPrice));
+  const [calibratedHighest, setCalibratedHighest] = useState(String(item.highestPrice || item.originalPrice));
+
+  const handleCalibrateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const low = parseFloat(calibratedLowest);
+    const avg = parseFloat(calibratedAverage);
+    const high = parseFloat(calibratedHighest);
+    if (!isNaN(low) && !isNaN(avg) && onCalibratePrices) {
+      onCalibratePrices(item.id, {
+        lowestPrice: low,
+        averagePrice: avg,
+        highestPrice: isNaN(high) ? Math.max(low, avg, item.currentPrice) : high,
+      });
+      setShowCalibrate(false);
+    }
+  };
 
   // Split calculation
   const splitMembers = members.filter((m) => item.splitWith?.includes(m.id));
@@ -212,17 +235,93 @@ export function ItemDetailModal({
                   )}
                 </div>
 
-                {/* 30-Day Historical Average Price Box (User req #1) */}
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs">
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="w-4 h-4 text-indigo-500 shrink-0" />
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      30-Day Historical Average:
-                    </span>
+                {/* 30-Day Historical Average & Real Rufus Calibration Box */}
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        30-Day Historical Average:
+                      </span>
+                      <span className="text-sm font-black text-slate-900 dark:text-white">
+                        ₹{(item.averagePrice || item.currentPrice).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowCalibrate(!showCalibrate)}
+                      className="px-2.5 py-1 rounded-xl text-[11px] font-bold border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all flex items-center gap-1 cursor-pointer"
+                      title="Calibrate using Rufus AI or Price History chart"
+                    >
+                      <Sparkles className="w-3 h-3 text-indigo-500" />
+                      <span>{showCalibrate ? 'Close Calibration' : '⚙️ Calibrate Rufus / True ATL'}</span>
+                    </button>
                   </div>
-                  <span className="text-sm font-black text-slate-900 dark:text-white">
-                    ₹{(item.averagePrice || item.currentPrice).toLocaleString('en-IN')}
-                  </span>
+
+                  {/* Calibration Inline Form */}
+                  {showCalibrate && (
+                    <form onSubmit={handleCalibrateSubmit} className="pt-2 border-t border-slate-200 dark:border-slate-700/60 space-y-2">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Match exact 30-day range &amp; 1-year historical low from Amazon Rufus or price history:
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
+                            True 1-Year / All-Time Low (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={calibratedLowest}
+                            onChange={(e) => setCalibratedLowest(e.target.value)}
+                            placeholder="e.g. 1249"
+                            required
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
+                            30-Day Average Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={calibratedAverage}
+                            onChange={(e) => setCalibratedAverage(e.target.value)}
+                            placeholder="e.g. 1499"
+                            required
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
+                            30-Day Peak / Highest (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={calibratedHighest}
+                            onChange={(e) => setCalibratedHighest(e.target.value)}
+                            placeholder="e.g. 1599"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowCalibrate(false)}
+                          className="px-3 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer"
+                        >
+                          Save Calibration &amp; Rebuild Chart
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               </div>
 
