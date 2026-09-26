@@ -1,0 +1,263 @@
+{
+  "members": [
+    {
+      "id": "member-1",
+      "name": "Pravin",
+      "shortName": "Pravin",
+      "email": "pravin@dealsquad.private",
+      "pin": "1984",
+      "avatar": "",
+      "color": "#3b82f6",
+      "role": "Member",
+      "bio": "",
+      "cardsHeld": [],
+      "stats": {
+        "itemsAdded": 0,
+        "totalSavings": 0,
+        "dealsSecured": 0
+      }
+    },
+    {
+      "id": "member-2",
+      "name": "Sweta",
+      "shortName": "Sweta",
+      "email": "sweta@dealsquad.private",
+      "pin": "2468",
+      "avatar": "",
+      "color": "#ec4899",
+      "role": "Member",
+      "bio": "",
+      "cardsHeld": [],
+      "stats": {
+        "itemsAdded": 0,
+        "totalSavings": 0,
+        "dealsSecured": 0
+      }
+    },
+    {
+      "id": "member-3",
+      "name": "Priyesh",
+      "shortName": "Priyesh",
+      "email": "priyesh@dealsquad.private",
+      "pin": "7711",
+      "avatar": "",
+      "color": "#10b981",
+      "role": "Member",
+      "bio": "",
+      "cardsHeld": [],
+      "stats": {
+        "itemsAdded": 0,
+        "totalSavings": 0,
+        "dealsSecured": 0
+      }
+    },
+    {
+      "id": "member-4",
+      "name": "Shreyash",
+      "shortName": "Shreyash",
+      "email": "shreyash@dealsquad.private",
+      "pin": "9021",
+      "avatar": "",
+      "color": "#f59e0b",
+      "role": "Member",
+      "bio": "",
+      "cardsHeld": [],
+      "stats": {
+        "itemsAdded": 0,
+        "totalSavings": 0,
+        "dealsSecured": 0
+      }
+    }
+  ],
+  "items": [
+    {
+      "title": "American Tourister RON Large 4 Compartment Laptop Backpack Travel Bag",
+      "url": "https://www.amazon.in/gp/product/B0C65ZF9SP/ref=ox_sc_act_title_3?smid=AXOGFIT0PZZ7G&th=1",
+      "imageUrl": "https://m.media-amazon.com/images/I/41dNoa86hhL._SX342_SY445_QL70_FMwebp_.jpg",
+      "retailer": "amazon",
+      "category": "Electronics",
+      "addedBy": "member-1",
+      "addedByName": "Pravin",
+      "currentPrice": 1399,
+      "originalPrice": 4200,
+      "lowestPrice": 1399,
+      "highestPrice": 4200,
+      "status": "want",
+      "saleTag": "gif",
+      "notes": "",
+      "priority": "high",
+      "splitWith": [],
+      "inStock": true,
+      "id": "item-1790445521719-ew5qn",
+      "addedAt": "2026-09-26T17:58:41.719Z",
+      "lastCheckedAt": "2026-09-26T17:58:41.719Z",
+      "priceHistory": [
+        {
+          "timestamp": "2026-09-26T17:58:41.719Z",
+          "price": 1399,
+          "originalPrice": 4200,
+          "note": "Added to wishlist"
+        }
+      ],
+      "fakeDiscountCheck": {
+        "isFake": true,
+        "verdict": "inflated_mrp",
+        "historicalAverage": 1399,
+        "actualDiscountVsAverage": 0,
+        "claimedDiscountPercentage": 67,
+        "analysisMessage": "⚠️ Inflated MRP Alert! Seller claims 67% off, but item normally sells around ₹1,399. True saving is only 0%!"
+      },
+      "comments": [],
+      "reactions": {},
+      "inCommonCart": false,
+      "cartQuantity": 1
+    }
+  ],
+  "saleEvents": [
+    {
+      "id": "bbd",
+      "name": "Flipkart Big Billion Days 2026",
+      "retailer": "flipkart",
+      "tagline": "India’s Biggest Electronic & Gadget Sale",
+      "badge": "BBD Mega Drop",
+      "color": "from-blue-600 to-indigo-800",
+      "accentColor": "#2563eb",
+      "startDate": "2026-09-28T01:45:18.183Z",
+      "endDate": "2026-10-04T05:45:18.183Z",
+      "bannerImage": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&auto=format&fit=crop&q=80",
+      "description": "Up to 80% off on mobiles, laptops, electronics with Axis & ICICI bank instant 10% discount.",
+      "phases": [
+        {
+          "name": "Phase 1: VIP Plus Early Access",
+          "tagline": "Midnight 12:00 AM unlocks for Plus members",
+          "startDate": "2026-09-28T01:45:18.183Z",
+          "endDate": "2026-09-29T01:45:18.183Z",
+          "status": "upcoming",
+          "isVipOnly": true
+        },
+        {
+          "name": "Phase 2: Open Sale & Rush Hours",
+          "tagline": "All deals live + ₹1,750 Axis instant card discount",
+          "startDate": "2026-09-29T01:45:18.183Z",
+          "endDate": "2026-10-01T17:45:18.183Z",
+          "status": "upcoming"
+        },
+        {
+          "name": "Phase 3: Maha Price Drop Flash",
+          "tagline": "12 AM, 8 AM, 4 PM limited lightning deals",
+          "startDate": "2026-10-01T17:45:18.183Z",
+          "endDate": "2026-10-04T05:45:18.183Z",
+          "status": "upcoming"
+        }
+      ]
+    },
+    {
+      "id": "gif",
+      "name": "Amazon Great Indian Festival 2026",
+      "retailer": "amazon",
+      "tagline": "Prime Early Access & Festive Deals",
+      "badge": "GIF Prime Deals",
+      "color": "from-amber-600 to-orange-700",
+      "accentColor": "#ea580c",
+      "startDate": "2026-09-28T13:45:18.183Z",
+      "endDate": "2026-10-04T17:45:18.183Z",
+      "bannerImage": "https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1200&auto=format&fit=crop&q=80",
+      "description": "Prime Early Access, SBI card 10% instant discount, exchange bonus, and no-cost EMI.",
+      "phases": [
+        {
+          "name": "Phase 1: Prime Early Access (24 Hours)",
+          "tagline": "Prime members get first dibs on lightning deals",
+          "startDate": "2026-09-28T13:45:18.183Z",
+          "endDate": "2026-09-29T13:45:18.183Z",
+          "status": "upcoming",
+          "isVipOnly": true
+        },
+        {
+          "name": "Phase 2: Festival Blockbusters",
+          "tagline": "SBI 10% Instant Off on Electronics & Appliances",
+          "startDate": "2026-09-29T13:45:18.183Z",
+          "endDate": "2026-10-02T13:45:18.183Z",
+          "status": "upcoming"
+        }
+      ]
+    },
+    {
+      "id": "myntra_bff",
+      "name": "Myntra Big Fashion Festival (BFF)",
+      "retailer": "myntra",
+      "tagline": "50-80% Off on Top Brands, Shoes & Apparel",
+      "badge": "Myntra BFF",
+      "color": "from-pink-600 to-rose-700",
+      "accentColor": "#e11d48",
+      "startDate": "2026-09-27T13:45:18.183Z",
+      "endDate": "2026-10-03T17:45:18.183Z",
+      "bannerImage": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&auto=format&fit=crop&q=80",
+      "description": "Flat 50-80% off on Nike, Adidas, Puma, Levi’s, Fossil + Kotak & ICICI 10% instant off."
+    },
+    {
+      "id": "diwali",
+      "name": "Mega Diwali Tech & Festive Dhamaka",
+      "retailer": "other",
+      "tagline": "Post-Sale Deep Festive Clearances",
+      "badge": "Diwali Special",
+      "color": "from-purple-600 to-pink-700",
+      "accentColor": "#9333ea",
+      "startDate": "2026-10-06T17:45:18.183Z",
+      "endDate": "2026-10-11T17:45:18.183Z",
+      "bannerImage": "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80",
+      "description": "Diwali lightning deals and flash drops across gadgets and gifting bundles."
+    }
+  ],
+  "activities": [
+    {
+      "id": "act-1",
+      "memberId": "member-3",
+      "memberName": "Priyesh",
+      "memberAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      "action": "added_item",
+      "itemTitle": "Apple MacBook Air M3 (16GB RAM)",
+      "itemId": "item-5",
+      "details": "Added MacBook Air M3 to Wishlist (GIF target)",
+      "timestamp": "2026-09-26T17:10:18.184Z"
+    },
+    {
+      "id": "act-2",
+      "memberId": "member-1",
+      "memberName": "Pravin",
+      "memberAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+      "action": "cart_toggle",
+      "itemTitle": "Apple iPhone 16 (128 GB)",
+      "itemId": "item-2",
+      "details": "Added iPhone 16 into Common Cart for BBD group buy",
+      "timestamp": "2026-09-26T16:55:18.184Z"
+    },
+    {
+      "id": "act-3",
+      "memberId": "member-2",
+      "memberName": "Sweta",
+      "memberAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80",
+      "action": "comment",
+      "itemTitle": "Nike Air Jordan 1 Low Retro",
+      "itemId": "item-3",
+      "details": "Spotted price ₹1,504 cheaper on Myntra BFF!",
+      "timestamp": "2026-09-26T16:15:18.184Z"
+    },
+    {
+      "id": "act-4",
+      "memberId": "member-4",
+      "memberName": "Shreyash",
+      "memberAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+      "action": "price_drop",
+      "itemTitle": "Sony WH-1000XM5 Headphones",
+      "itemId": "item-1",
+      "details": "Dropped to ₹24,990 (All-Time Low hit!)",
+      "timestamp": "2026-09-26T14:45:18.184Z"
+    }
+  ],
+  "webhookConfig": {
+    "enabled": true,
+    "type": "telegram",
+    "webhookUrl": ""
+  },
+  "updatedAt": "2026-09-26T18:41:24.713Z"
+}

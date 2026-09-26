@@ -1,0 +1,17 @@
+{
+  "name": "DealSquad — BBD, GIF & Myntra Deal Tracker",
+  "short_name": "DealSquad",
+  "description": "Private 4-Member Wishlist, Common Cart & Price Drop Tracker for Pravin, Sweta, Priyesh, and Shreyash",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
