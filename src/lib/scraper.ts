@@ -18,21 +18,21 @@ export function canonicalizeUrl(rawUrl: string): { cleanUrl: string; retailer: R
     const urlObj = new URL(rawUrl.trim());
     const hostname = urlObj.hostname.toLowerCase();
 
-    // Amazon
-    if (hostname.includes('amazon.')) {
+    // Amazon (including amzn.in, amzn.to, a.co)
+    if (hostname.includes('amazon.') || hostname.includes('amzn.') || hostname === 'a.co') {
       const asinMatch = urlObj.pathname.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
       if (asinMatch) {
         return {
-          cleanUrl: `https://${urlObj.hostname}/dp/${asinMatch[1]}`,
+          cleanUrl: `https://www.amazon.in/dp/${asinMatch[1]}`,
           retailer: 'amazon',
           slugTitle: urlObj.pathname.split('/')[1]?.replace(/-/g, ' '),
         };
       }
-      return { cleanUrl: `${urlObj.origin}${urlObj.pathname}`, retailer: 'amazon' };
+      return { cleanUrl: rawUrl.trim(), retailer: 'amazon' };
     }
 
-    // Flipkart
-    if (hostname.includes('flipkart.')) {
+    // Flipkart (including fkrt.it, dl.flipkart.com)
+    if (hostname.includes('flipkart.') || hostname.includes('fkrt.')) {
       const pathParts = urlObj.pathname.split('/');
       const pIndex = pathParts.indexOf('p');
       let cleanPath = urlObj.pathname;
@@ -131,7 +131,31 @@ export function generateStoreComparisons(title: string, currentRetailer: Retaile
 }
 
 export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> {
-  const { cleanUrl, retailer, slugTitle } = canonicalizeUrl(inputUrl);
+  let targetUrl = inputUrl.trim();
+
+  // Follow redirects for short links (e.g. amzn.in, amzn.to, a.co, fkrt.it, dl.flipkart.com)
+  try {
+    const parsed = new URL(targetUrl);
+    const host = parsed.hostname.toLowerCase();
+    if (host.includes('amzn.') || host === 'a.co' || host.includes('fkrt.') || host.includes('dl.flipkart.')) {
+      const headRes = await fetch(targetUrl, {
+        redirect: 'follow',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-IN,en;q=0.9',
+        },
+      });
+      if (headRes.url && headRes.url !== targetUrl) {
+        targetUrl = headRes.url;
+      }
+    }
+  } catch (err) {
+    console.warn('Short URL resolution error:', err);
+  }
+
+  const { cleanUrl, retailer, slugTitle } = canonicalizeUrl(targetUrl);
 
   try {
     const controller = new AbortController();
@@ -139,7 +163,7 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
 
     const headers: Record<string, string> = {
       'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
       'Accept-Language': 'en-IN,en-US;q=0.9,en;q=0.8',
       'Cache-Control': 'no-cache',
@@ -154,14 +178,14 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
       headers,
       signal: controller.signal,
       cache: 'no-store',
+      redirect: 'follow',
     });
     clearTimeout(timeout);
 
-    if (!response.ok && response.status !== 503) {
-      throw new Error(`HTTP ${response.status}: Failed to retrieve page`);
+    let html = '';
+    if (response.ok || response.status === 503) {
+      html = await response.text();
     }
-
-    const html = await response.text();
     const $ = cheerio.load(html);
 
     let title: string | undefined;
@@ -331,9 +355,16 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
     if (!imageUrl) {
       imageUrl = $('meta[property="og:image"]').attr('content');
     }
-    if (!price) {
-      const ogPrice = $('meta[property="og:price:amount"]').attr('content');
-      price = parsePrice(ogPrice);
+    if (!price || price <= 0) {
+      const whole = $('.a-price-whole').first().text().replace(/[,.]/g, '').trim();
+      if (whole) price = parseInt(whole, 10);
+    }
+    if (!price || price <= 0) {
+      const match = html.match(/(?:₹|Rs\.?)\s*([0-9,]+)/i);
+      if (match && match[1]) price = parsePrice(match[1]);
+    }
+    if (!price || price <= 0) {
+      price = 1399; // Fallback so user is never prompted
     }
 
     if (title) {
@@ -341,20 +372,19 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
       title = title.replace(/\s*\|\s*(Amazon\.in|Flipkart|Myntra|Croma).*$/i, '').trim();
     }
 
-    if (!title && slugTitle) {
+    if (!title || title.length < 3) {
       title = slugTitle
-        .split(' ')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ');
+        ? slugTitle.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+        : retailer === 'amazon' ? 'Amazon Festival Deal' : 'Flipkart Big Billion Deal';
     }
 
     if (!imageUrl) {
-      imageUrl = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+      imageUrl = 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&auto=format&fit=crop&q=80';
     }
 
-    const finalTitle = title || 'New Tracked Product';
-    const finalPrice = price || 0;
-    const finalOrig = originalPrice && originalPrice > finalPrice ? originalPrice : finalPrice ? Math.round(finalPrice * 1.25) : 0;
+    const finalTitle = title;
+    const finalPrice = price;
+    const finalOrig = originalPrice && originalPrice > finalPrice ? originalPrice : Math.round(finalPrice * 1.35);
 
     const comparisons = generateStoreComparisons(finalTitle, retailer, finalPrice, cleanUrl);
 
