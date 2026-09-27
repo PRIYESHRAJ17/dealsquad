@@ -11,12 +11,7 @@ A private, collaborative wishlist and price-drop tracking web application built 
 
 Each member has a personal PIN and their cards are pre-registered for the **Bank Card Optimizer**:
 
-| Member | Role | Cards Held | Generated PIN |
-|---|---|---|:---:|
-| **Pravin** | Tech & Gadget Hunter 💻 | Flipkart Axis 5% Cashback, OneCard Metal | `1984` |
-| **Sweta** | BBD & Fashion Curator 🛍️ | Amazon Pay ICICI 5%, Myntra Kotak 7.5% | `2468` |
-| **Priyesh** | Card Offer & Deal Strategist 🎯 | SBI Cashback 5%, HDFC Regalia Gold 10%, Axis Atlas | `7711` |
-| **Shreyash** | Prime & Flash Drop Scout ⚡ | HDFC Millennia 5%, Tata Neu Infinity 5% | `9021` |
+
 
 > 📱 **Permanent Device Remembering:** Once any member unlocks the app with their PIN on their smartphone or laptop, DealSquad stores a secure long-lived credential (`dealsquad_device_auth_member` and a 1-year persistent cookie). They will **never have to log in again** from that device.
 
@@ -58,12 +53,7 @@ Each member has a personal PIN and their cards are pre-registered for the **Bank
 Since the server is bound to `0.0.0.0:3000`, any member on the same Wi-Fi can open:
 ```
 http://192.168.29.82:3000
-```
-- Pravin opens on his phone ➔ chooses **Pravin** (PIN: `1984`)
-- Sweta opens on her phone ➔ chooses **Sweta** (PIN: `2468`)
-- Priyesh opens on his laptop/phone ➔ chooses **Priyesh** (PIN: `7711`)
-- Shreyash opens on his phone ➔ chooses **Shreyash** (PIN: `9021`)
-*(All devices remain permanently logged in!)*
+
 
 ### Option B: Instant Public Live Link (Works on Mobile Data / Anywhere)
 Run the share command from the project folder:
