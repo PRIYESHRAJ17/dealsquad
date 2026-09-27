@@ -937,6 +937,14 @@ export default function DashboardPage() {
           setShowCompareModal(false);
           setComparingItem(null);
         }}
+        onUpdateComparisons={(itemId, newComparisons) => {
+          setItems((prev) =>
+            prev.map((i) => (i.id === itemId ? { ...i, comparisons: newComparisons } : i))
+          );
+          if (comparingItem && comparingItem.id === itemId) {
+            setComparingItem((prev) => (prev ? { ...prev, comparisons: newComparisons } : null));
+          }
+        }}
       />
 
       {/* Live Activity Feed Drawer */}

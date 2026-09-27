@@ -45,6 +45,7 @@ export interface Comment {
 
 export interface StoreComparison {
   retailer: Retailer;
+  storeName?: string;
   price: number;
   originalPrice?: number;
   url: string;

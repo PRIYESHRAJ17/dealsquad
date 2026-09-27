@@ -85,65 +85,370 @@ export function canonicalizeUrl(rawUrl: string): { cleanUrl: string; retailer: R
   }
 }
 
-// Generate cross-store comparison search links
-export function generateStoreComparisons(title: string, currentRetailer: Retailer, currentPrice: number, currentUrl: string): StoreComparison[] {
-  const query = encodeURIComponent(title.split(' ').slice(0, 5).join(' '));
+const BRAND_STORE_MAP: Record<string, string> = {
+  'safaribags.com': 'Safari Official',
+  'lining.studio': 'Li-Ning Official',
+  'liningstudio.com': 'Li-Ning Official',
+  'in.puma.com': 'Puma Official',
+  'puma.com': 'Puma Official',
+  'nike.com': 'Nike Official',
+  'adidas.co.in': 'Adidas Official',
+  'boat-lifestyle.com': 'boAt Official',
+  'tatacliq.com': 'Tata CLiQ',
+  'croma.com': 'Croma',
+  'reliancedigital.in': 'Reliance Digital',
+  'nykaa.com': 'Nykaa',
+  'nykaaman.com': 'Nykaa Man',
+  'ajio.com': 'AJIO',
+  'meesho.com': 'Meesho',
+  'khelmart.com': 'Khelmart',
+  'sportsuncle.com': 'SportsUncle',
+  'decathlon.in': 'Decathlon',
+  'himalayawellness.in': 'Himalaya Official',
+  'fastrack.in': 'Fastrack',
+  'titan.co.in': 'Titan',
+  'gonoise.com': 'Noise',
+  'zepto.com': 'Zepto',
+  'blinkit.com': 'Blinkit',
+};
 
-  const comparisons: StoreComparison[] = [
+const EXCLUDED_COMPARISON_DOMAINS = [
+  'amazon.', 'flipkart.', 'myntra.', 'youtube.', 'facebook.', 'instagram.',
+  'pinterest.', 'twitter.', 'x.com', 'reddit.', 'quora.', 'pricehistory.',
+  'mysmartprice.', 'smartprix.', 'digit.in', '91mobiles.', 'wikipedia.',
+  'indiamart.', 'desertcart.', 'ubuy.', 'walmart.', 'ebay.', 'carousell.',
+  'linkedin.', 'aliexpress.'
+];
+
+// Clean fallback for store comparisons
+export function generateStoreComparisons(
+  title: string,
+  currentRetailer: Retailer,
+  currentPrice: number,
+  currentUrl: string
+): StoreComparison[] {
+  const query = encodeURIComponent(title.split(' ').slice(0, 5).join(' '));
+  const myntraQuery = encodeURIComponent(title.split(' ').slice(0, 3).join('-').toLowerCase());
+
+  return [
     {
-      retailer: currentRetailer,
+      retailer: 'amazon',
       price: currentPrice,
-      url: currentUrl,
+      url: currentRetailer === 'amazon' ? currentUrl : `https://www.amazon.in/s?k=${query}`,
       inStock: true,
-      isCheapest: true,
+      specialOffer: 'GIF Prime Deals',
+      isCheapest: currentRetailer === 'amazon',
+    },
+    {
+      retailer: 'flipkart',
+      price: currentPrice,
+      url: currentRetailer === 'flipkart' ? currentUrl : `https://www.flipkart.com/search?q=${query}`,
+      inStock: true,
+      specialOffer: 'BBD Axis 5% Cashback',
+      isCheapest: currentRetailer === 'flipkart',
+    },
+    {
+      retailer: 'myntra',
+      price: currentPrice,
+      url: currentRetailer === 'myntra' ? currentUrl : `https://www.myntra.com/${myntraQuery}`,
+      inStock: true,
+      specialOffer: 'Myntra BFF Coupon',
+      isCheapest: currentRetailer === 'myntra',
+    },
+  ];
+}
+
+// Asynchronous real live cross-store comparison search
+export async function fetchRealStoreComparisons(
+  title: string,
+  currentRetailer: Retailer,
+  currentPrice: number,
+  currentUrl: string
+): Promise<StoreComparison[]> {
+  const cleanTitle = title
+    .replace(/[^\w\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const searchQuery = `${cleanTitle} price in India buy online`;
+  let results: Array<{ url: string; title: string; image?: string }> = [];
+
+  try {
+    const vqdRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(searchQuery)}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (vqdRes.ok) {
+      const vqdHtml = await vqdRes.text();
+      const vqdMatch = vqdHtml.match(/vqd=([0-9-]+)/) || vqdHtml.match(/vqd=([a-zA-Z0-9_-]+)/);
+      const vqd = vqdMatch ? vqdMatch[1] : '';
+
+      if (vqd) {
+        const imgRes = await fetch(
+          `https://duckduckgo.com/i.js?l=in-en&o=json&q=${encodeURIComponent(searchQuery)}&vqd=${vqd}`,
+          {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            signal: AbortSignal.timeout(5000),
+          }
+        );
+        if (imgRes.ok) {
+          const data = await imgRes.json();
+          results = data.results || [];
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Real comparison search failed:', e);
+  }
+
+  // 1. Amazon
+  let amazonUrl = `https://www.amazon.in/s?k=${encodeURIComponent(cleanTitle.split(' ').slice(0, 5).join(' '))}`;
+  let amazonPrice = 0;
+  if (currentRetailer === 'amazon') {
+    amazonUrl = currentUrl;
+    amazonPrice = currentPrice;
+  } else {
+    const match = results.find(
+      (r) => r.url && r.url.includes('amazon.in') && (r.url.includes('/dp/') || r.url.includes('/gp/product/'))
+    );
+    if (match) {
+      amazonUrl = match.url;
+      try {
+        const res = await fetch(match.url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' },
+          signal: AbortSignal.timeout(3500),
+        });
+        if (res.ok) {
+          const html = await res.text();
+          const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi);
+          if (ldMatch) {
+            for (const s of ldMatch) {
+              try {
+                const d = JSON.parse(s.replace(/<\/?script[^>]*>/gi, '').trim());
+                const item = Array.isArray(d) ? d[0] : d;
+                const p = item?.offers?.price || item?.offers?.[0]?.price;
+                if (p) {
+                  const parsed = parsePrice(String(p));
+                  if (parsed && parsed >= 50) {
+                    amazonPrice = parsed;
+                    break;
+                  }
+                }
+              } catch {}
+            }
+          }
+          if (!amazonPrice) {
+            const wholeMatch = html.match(/class="a-price-whole"[^>]*>([0-9,]+)/i);
+            if (wholeMatch) {
+              const parsed = parsePrice(wholeMatch[1]);
+              if (parsed && parsed >= 50) amazonPrice = parsed;
+            }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // 2. Flipkart
+  let flipkartUrl = `https://www.flipkart.com/search?q=${encodeURIComponent(cleanTitle.split(' ').slice(0, 5).join(' '))}`;
+  let flipkartPrice = 0;
+  if (currentRetailer === 'flipkart') {
+    flipkartUrl = currentUrl;
+    flipkartPrice = currentPrice;
+  } else {
+    const match = results.find(
+      (r) => r.url && r.url.includes('flipkart.com') && (r.url.includes('/p/') || r.url.includes('itm'))
+    );
+    if (match) {
+      flipkartUrl = match.url;
+      try {
+        const res = await fetch(match.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+            'Accept': 'text/html',
+          },
+          signal: AbortSignal.timeout(3500),
+        });
+        if (res.ok) {
+          const html = await res.text();
+          const leafMatches = html.match(/>\s*(₹\s*[0-9,]+)\s*</g);
+          if (leafMatches && leafMatches.length > 0) {
+            const p = parsePrice(leafMatches[0]);
+            if (p && p >= 50) flipkartPrice = p;
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // 3. Myntra
+  let myntraUrl = `https://www.myntra.com/${encodeURIComponent(cleanTitle.split(' ').slice(0, 3).join('-').toLowerCase())}`;
+  let myntraPrice = 0;
+  if (currentRetailer === 'myntra') {
+    myntraUrl = currentUrl;
+    myntraPrice = currentPrice;
+  } else {
+    const match = results.find(
+      (r) => r.url && r.url.includes('myntra.com') && (r.url.includes('/buy') || /\/\d{6,12}/.test(r.url))
+    );
+    if (match) {
+      myntraUrl = match.url;
+      const styleMatch = match.url.match(/\/(\d{6,12})/);
+      const styleId = styleMatch ? styleMatch[1] : undefined;
+      if (styleId) {
+        try {
+          const textRes = await fetch(
+            `https://html.duckduckgo.com/html/?q=${encodeURIComponent(`${cleanTitle} ${styleId} myntra price`)}`,
+            {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+              signal: AbortSignal.timeout(3500),
+            }
+          );
+          if (textRes.ok) {
+            const html = await textRes.text();
+            const atMatch = html.match(/(?:at|Rs\.?|₹)\s*([0-9,]+)/i);
+            if (atMatch) {
+              const p = parsePrice(atMatch[1]);
+              if (p && p >= 50) myntraPrice = p;
+            }
+          }
+        } catch {}
+      }
+    }
+  }
+
+  // Fallbacks if live price wasn't fetched
+  if (!amazonPrice || amazonPrice <= 0) {
+    amazonPrice = currentPrice;
+  }
+  if (!flipkartPrice || flipkartPrice <= 0) {
+    flipkartPrice = currentPrice;
+  }
+  if (!myntraPrice || myntraPrice <= 0) {
+    myntraPrice = currentPrice;
+  }
+
+  const baseComparisons: StoreComparison[] = [
+    {
+      retailer: 'amazon',
+      price: amazonPrice,
+      url: amazonUrl,
+      inStock: true,
+      specialOffer: 'GIF Prime Deals',
+    },
+    {
+      retailer: 'flipkart',
+      price: flipkartPrice,
+      url: flipkartUrl,
+      inStock: true,
+      specialOffer: 'BBD Axis 5% Cashback',
+    },
+    {
+      retailer: 'myntra',
+      price: myntraPrice,
+      url: myntraUrl,
+      inStock: true,
+      specialOffer: 'Myntra BFF Coupon',
     },
   ];
 
-  if (currentRetailer !== 'amazon') {
-    const estimatedAmazonPrice = Math.round(currentPrice * (currentRetailer === 'flipkart' ? 1.03 : 1.05));
-    comparisons.push({
-      retailer: 'amazon',
-      price: estimatedAmazonPrice,
-      url: `https://www.amazon.in/s?k=${query}`,
-      inStock: true,
-      specialOffer: 'GIF SBI 10% Instant Off',
-      isCheapest: estimatedAmazonPrice < currentPrice,
-    });
+  const minCorePrice = Math.min(amazonPrice, flipkartPrice, myntraPrice);
+
+  // 4. Check for 4th Legit Store (Cheapest only)
+  let fourthStore: StoreComparison | null = null;
+  const candidateStores: Array<{ name: string; url: string }> = [];
+
+  for (const r of results) {
+    if (!r.url || candidateStores.length >= 3) break;
+    try {
+      const u = new URL(r.url);
+      const host = u.hostname.replace(/^www\./, '').toLowerCase();
+      if (EXCLUDED_COMPARISON_DOMAINS.some((d) => host.includes(d))) continue;
+
+      let matchedName = BRAND_STORE_MAP[host];
+      if (!matchedName) {
+        const brandWords = cleanTitle.split(' ').slice(0, 2);
+        for (const bw of brandWords) {
+          if (bw.length > 3 && host.includes(bw.toLowerCase())) {
+            matchedName = `${bw.charAt(0).toUpperCase() + bw.slice(1).toLowerCase()} Official`;
+            break;
+          }
+        }
+      }
+
+      if (matchedName && !candidateStores.some((c) => c.name === matchedName)) {
+        candidateStores.push({ name: matchedName, url: r.url });
+      }
+    } catch {}
   }
 
-  if (currentRetailer !== 'flipkart') {
-    const estimatedFlipkartPrice = Math.round(currentPrice * (currentRetailer === 'amazon' ? 0.97 : 1.02));
-    comparisons.push({
-      retailer: 'flipkart',
-      price: estimatedFlipkartPrice,
-      url: `https://www.flipkart.com/search?q=${query}`,
-      inStock: true,
-      specialOffer: 'BBD Axis 5% Cashback',
-      isCheapest: estimatedFlipkartPrice < currentPrice,
-    });
+  if (candidateStores.length > 0) {
+    await Promise.all(
+      candidateStores.map(async (cand) => {
+        if (fourthStore) return;
+        try {
+          const res = await fetch(cand.url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            signal: AbortSignal.timeout(3000),
+          });
+          if (res.ok) {
+            const html = await res.text();
+            let pVal = 0;
+            const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi);
+            if (ldMatch) {
+              for (const s of ldMatch) {
+                try {
+                  const d = JSON.parse(s.replace(/<\/?script[^>]*>/gi, '').trim());
+                  const item = Array.isArray(d) ? d[0] : d;
+                  const p = item?.offers?.price || item?.offers?.[0]?.price;
+                  if (p) {
+                    const parsed = parsePrice(String(p));
+                    if (parsed && parsed >= 50) {
+                      pVal = parsed;
+                      break;
+                    }
+                  }
+                } catch {}
+              }
+            }
+            if (!pVal) {
+              const metaPrice = html.match(/property="og:price:amount"\s*content="([^"]+)"/i);
+              if (metaPrice) {
+                const parsed = parsePrice(metaPrice[1]);
+                if (parsed && parsed >= 50) pVal = parsed;
+              }
+            }
+            if (pVal > 0 && pVal < minCorePrice) {
+              fourthStore = {
+                retailer: 'other',
+                storeName: cand.name,
+                price: pVal,
+                url: cand.url,
+                inStock: true,
+                specialOffer: 'Direct Brand Clearance',
+                isCheapest: true,
+              };
+            }
+          }
+        } catch {}
+      })
+    );
   }
 
-  if (currentRetailer !== 'myntra') {
-    const estimatedMyntraPrice = Math.round(currentPrice * 0.99);
-    comparisons.push({
-      retailer: 'myntra',
-      price: estimatedMyntraPrice,
-      url: `https://www.myntra.com/${encodeURIComponent(title.split(' ').slice(0, 3).join('-').toLowerCase())}`,
-      inStock: true,
-      specialOffer: 'Myntra BFF Coupon',
-      isCheapest: false,
-    });
+  const finalComparisons = [...baseComparisons];
+  if (fourthStore) {
+    finalComparisons.push(fourthStore);
   }
 
-  let lowest = Infinity;
-  comparisons.forEach((c) => {
-    if (c.price < lowest) lowest = c.price;
-  });
-  comparisons.forEach((c) => {
-    c.isCheapest = c.price === lowest;
-  });
+  let minAll = Infinity;
+  for (const c of finalComparisons) {
+    if (c.price < minAll) minAll = c.price;
+  }
+  for (const c of finalComparisons) {
+    c.isCheapest = c.price === minAll;
+  }
 
-  return comparisons;
+  return finalComparisons;
 }
 
 // Helper to perform live search lookup for Myntra/Flipkart when geo-blocked by Cloud WAF
@@ -440,7 +745,7 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
 
             const inStock = d.sizes?.some((s: { available?: boolean }) => s.available) ?? !d.flags?.outOfStock;
             const finalOrig = originalPrice && originalPrice > price ? originalPrice : Math.round(price * 1.25);
-            const comparisons = generateStoreComparisons(finalTitle, 'myntra', price, cleanUrl);
+            const comparisons = await fetchRealStoreComparisons(finalTitle, 'myntra', price, cleanUrl);
 
             return {
               success: true,
@@ -906,7 +1211,7 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
     const finalPrice = price;
     const finalOrig = originalPrice && originalPrice > finalPrice ? originalPrice : Math.round(finalPrice * 1.25);
 
-    const comparisons = generateStoreComparisons(finalTitle, retailer, finalPrice, cleanUrl);
+    const comparisons = await fetchRealStoreComparisons(finalTitle, retailer, finalPrice, cleanUrl);
 
     return {
       success: true,
