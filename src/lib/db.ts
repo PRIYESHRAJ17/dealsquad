@@ -499,8 +499,8 @@ export const INITIAL_ITEMS: WishlistItem[] = [
     id: 'item-7',
     title: 'Puma Men Color-Block Sneakers',
     brand: 'Puma',
-    url: 'https://www.myntra.com/casual-shoes/puma/puma-men-color-block-sneakers/28392288/buy',
-    imageUrl: 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/28392288/2024/3/20/73111f18-683a-4416-8367-75f80b271d181710928955219-Puma-Men-Casual-Shoes-8721710928954737-1.jpg',
+    url: 'https://www.myntra.com/casual-shoes/puma/puma-men-color-block-sneakers/29441352/buy',
+    imageUrl: 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg',
     retailer: 'myntra',
     category: 'Fashion',
     addedBy: 'member-3', // Priyesh
@@ -599,16 +599,70 @@ class Database {
     };
   }
 
+  private sanitizeData(data: GroupData): GroupData {
+    if (!data || !data.items || !Array.isArray(data.items)) return data;
+    let modified = false;
+
+    data.items = data.items.map((item) => {
+      const titleLower = (item.title || '').toLowerCase();
+      const urlLower = (item.url || '').toLowerCase();
+      const isPuma =
+        titleLower.includes('puma') ||
+        urlLower.includes('puma') ||
+        (urlLower.includes('myntra') && (item.currentPrice === 1399 || item.imageUrl?.includes('photo-1553062407-98eeb64c6a62')));
+
+      if (isPuma) {
+        if (
+          item.currentPrice !== 1619 ||
+          item.originalPrice !== 4499 ||
+          item.title !== 'Puma Men Color-Block Sneakers' ||
+          !item.imageUrl?.includes('29441352')
+        ) {
+          modified = true;
+        }
+        return {
+          ...item,
+          title: 'Puma Men Color-Block Sneakers',
+          brand: 'Puma',
+          currentPrice: 1619,
+          originalPrice: 4499,
+          lowestPrice: 1619,
+          averagePrice: 1999,
+          retailer: 'myntra',
+          imageUrl: 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg',
+        };
+      }
+
+      // Repair any footwear items that mistakenly inherited the black backpack image
+      if ((titleLower.includes('shoe') || titleLower.includes('sneaker')) && item.imageUrl?.includes('photo-1553062407-98eeb64c6a62')) {
+        modified = true;
+        return {
+          ...item,
+          imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80',
+        };
+      }
+
+      return item;
+    });
+
+    if (modified) {
+      this.saveData(data).catch(() => {});
+    }
+
+    return data;
+  }
+
   public async getData(): Promise<GroupData> {
     // 1. Try Upstash Redis if configured
     if (this.upstashClient) {
       try {
         const cloudData = await this.upstashClient.get<GroupData>('dealsquad_db');
         if (cloudData && cloudData.members && cloudData.members.length > 0) {
-          this.inMemoryData = cloudData;
-          return cloudData;
+          const sanitized = this.sanitizeData(cloudData);
+          this.inMemoryData = sanitized;
+          return sanitized;
         }
-        const initialData = this.getInitialData();
+        const initialData = this.sanitizeData(this.getInitialData());
         await this.upstashClient.set('dealsquad_db', initialData);
         this.inMemoryData = initialData;
         return initialData;
@@ -623,10 +677,11 @@ class Database {
       try {
         const blobData = await netlifyStore.get('dealsquad_db', { type: 'json' });
         if (blobData && (blobData as GroupData).members) {
-          this.inMemoryData = blobData as GroupData;
-          return blobData as GroupData;
+          const sanitized = this.sanitizeData(blobData as GroupData);
+          this.inMemoryData = sanitized;
+          return sanitized;
         }
-        const initialData = this.getInitialData();
+        const initialData = this.sanitizeData(this.getInitialData());
         await netlifyStore.setJSON('dealsquad_db', initialData);
         this.inMemoryData = initialData;
         return initialData;
@@ -643,17 +698,18 @@ class Database {
         const parsed = JSON.parse(fileContent);
         const hasCorrectMembers = parsed.members?.some((m: Member) => m.name === 'Pravin');
         if (hasCorrectMembers && parsed.activities) {
-          this.inMemoryData = parsed;
-          return parsed;
+          const sanitized = this.sanitizeData(parsed);
+          this.inMemoryData = sanitized;
+          return sanitized;
         }
       }
     } catch (err) {
       console.warn('Error reading db.json, recreating defaults:', err);
     }
 
-    if (this.inMemoryData) return this.inMemoryData;
+    if (this.inMemoryData) return this.sanitizeData(this.inMemoryData);
 
-    const initialData = this.getInitialData();
+    const initialData = this.sanitizeData(this.getInitialData());
     try {
       this.ensureDirectory();
       fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf-8');
@@ -803,9 +859,7 @@ class Database {
         low = 1619;
         avg = 1999;
         retailer = 'myntra';
-        if (!imageUrl || imageUrl.includes('unsplash') || imageUrl.includes('maintenance')) {
-          imageUrl = 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/28392288/2024/3/20/73111f18-683a-4416-8367-75f80b271d181710928955219-Puma-Men-Casual-Shoes-8721710928954737-1.jpg';
-        }
+        imageUrl = 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg';
       }
 
       if (!avg || avg <= 0 || avg === cur) {

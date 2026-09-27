@@ -224,8 +224,15 @@ export function ItemDetailModal({
                 alt={item.title}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+                  const target = e.target as HTMLImageElement;
+                  const t = (item.title || '').toLowerCase();
+                  if (t.includes('puma')) {
+                    target.src = 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg';
+                  } else if (t.includes('shoe') || t.includes('sneaker') || t.includes('footwear')) {
+                    target.src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80';
+                  } else {
+                    target.src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+                  }
                 }}
               />
             </div>
