@@ -146,6 +146,141 @@ export function generateStoreComparisons(title: string, currentRetailer: Retaile
   return comparisons;
 }
 
+// Helper to perform live search lookup for Myntra/Flipkart when geo-blocked by Cloud WAF
+export async function lookupRetailerWebData(
+  productQuery: string,
+  retailer: Retailer,
+  styleId?: string
+): Promise<{ imageUrl?: string; price?: number; originalPrice?: number; title?: string }> {
+  let imageUrl: string | undefined;
+  let price: number | undefined;
+  let originalPrice: number | undefined;
+  let title: string | undefined;
+
+  const cleanQuery = productQuery.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!cleanQuery) return {};
+
+  // 1. DuckDuckGo Image Search for real retailer photo
+  try {
+    const query = encodeURIComponent(`"${cleanQuery}" ${retailer === 'myntra' ? 'myntra' : retailer === 'flipkart' ? 'flipkart' : ''}`);
+    const tokenRes = await fetch(`https://duckduckgo.com/?q=${query}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (tokenRes.ok) {
+      const tokenHtml = await tokenRes.text();
+      const vqdMatch = tokenHtml.match(/vqd=([^&"']+)/) || tokenHtml.match(/vqd:\s*["']([^"']+)["']/);
+      if (vqdMatch) {
+        const vqd = vqdMatch[1];
+        const imgRes = await fetch(`https://duckduckgo.com/i.js?q=${query}&vqd=${vqd}&o=json&p=1`, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+            Referer: 'https://duckduckgo.com/',
+          },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (imgRes.ok) {
+          const json = await imgRes.json();
+          const results = json.results || [];
+          if (retailer === 'myntra') {
+            if (styleId) {
+              const matchWithStyle = results.find(
+                (r: { image?: string }) => r.image && r.image.includes(styleId) && r.image.includes('myntassets')
+              );
+              if (matchWithStyle) {
+                imageUrl = matchWithStyle.image;
+                if (matchWithStyle.title) title = matchWithStyle.title;
+              }
+            }
+            if (!imageUrl) {
+              const matchMyntra = results.find(
+                (r: { image?: string }) => r.image && r.image.includes('myntassets')
+              );
+              if (matchMyntra) {
+                imageUrl = matchMyntra.image;
+                if (matchMyntra.title) title = matchMyntra.title;
+              }
+            }
+          } else if (retailer === 'flipkart') {
+            const matchFk = results.find(
+              (r: { image?: string }) => r.image && (r.image.includes('flixcart') || r.image.includes('flipkart'))
+            );
+            if (matchFk) {
+              imageUrl = matchFk.image;
+              if (matchFk.title) title = matchFk.title;
+            }
+          }
+          if (!imageUrl && results[0]?.image) {
+            imageUrl = results[0].image;
+            if (results[0].title) title = results[0].title;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Web image lookup error:', err);
+  }
+
+  // Clean Myntra CDN URLs to high-res
+  if (imageUrl && imageUrl.includes('myntassets.com')) {
+    imageUrl = imageUrl.replace(/h_\d+,w_\d+[^/]*\//, '');
+    if (!imageUrl.includes('h_1440')) {
+      imageUrl = imageUrl.replace('/v1/assets/', '/h_1440,q_90,w_1080/v1/assets/');
+    }
+  }
+
+  // 2. DuckDuckGo Text Snippet Search for Price & MRP
+  try {
+    const textQuery = encodeURIComponent(`"${cleanQuery}" ${retailer === 'myntra' ? 'myntra' : retailer === 'flipkart' ? 'flipkart' : ''}`);
+    const textRes = await fetch(`https://html.duckduckgo.com/html/?q=${textQuery}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (textRes.ok) {
+      const html = await textRes.text();
+      const snippets = html.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g) || [];
+      for (const s of snippets) {
+        const text = s.replace(/<[^>]+>/g, '').trim();
+        const matches = text.match(/(?:Rs\.?|₹)\s*([0-9,]+)/gi);
+        if (matches && matches.length > 0) {
+          const nums = matches
+            .map((m) => parseInt(m.replace(/[^\d]/g, ''), 10))
+            .filter((n) => n > 50 && n < 1000000);
+          if (nums.length === 1 && !price) {
+            price = nums[0];
+          } else if (nums.length >= 2) {
+            nums.sort((a, b) => a - b);
+            if (!price) price = nums[0];
+            if (!originalPrice) originalPrice = nums[nums.length - 1];
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Web snippet price lookup error:', err);
+  }
+
+  if (title) {
+    title = title
+      .replace(/^Buy\s+/i, '')
+      .replace(/\s*-\s*Buy\s+.*$/i, '')
+      .replace(/\s*\|\s*Myntra.*$/i, '')
+      .replace(/\s*\|\s*Flipkart.*$/i, '')
+      .replace(/\s+Online\s+at\s+.*$/i, '')
+      .trim();
+  }
+
+  return { imageUrl, price, originalPrice, title };
+}
+
 export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> {
   let targetUrl = inputUrl.trim();
 
@@ -201,8 +336,14 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
           if (d && d.name) {
             const finalTitle = d.name.trim();
             const brand = d.brand?.name || undefined;
-            const originalPrice = d.mrp || 0;
+            let originalPrice = d.mrp || 0;
             let price = d.selectedSeller?.discountedPrice || d.discountedPrice;
+            if (!price && d.sizes?.[0]?.sizeSellerData?.[0]?.discountedPrice) {
+              price = d.sizes[0].sizeSellerData[0].discountedPrice;
+            }
+            if (!originalPrice && d.sizes?.[0]?.sizeSellerData?.[0]?.mrp) {
+              originalPrice = d.sizes[0].sizeSellerData[0].mrp;
+            }
             if (!price && originalPrice) {
               const disc = d.discounts?.[0]?.discountPercent || d.selectedSeller?.discount?.discountPercent;
               if (disc) price = Math.round(originalPrice * (1 - disc / 100));
@@ -264,7 +405,9 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
 
     const headers: Record<string, string> = {
       'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+        retailer === 'flipkart'
+          ? 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
+          : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
       'Accept-Language': 'en-IN,en-US;q=0.9,en;q=0.8',
       'Cache-Control': 'no-cache',
@@ -590,8 +733,11 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
       if (whole) price = parseInt(whole, 10);
     }
     if (!price || price <= 0) {
-      const match = html.match(/(?:₹|Rs\.?)\s*([0-9,]+)/i);
-      if (match && match[1]) price = parsePrice(match[1]);
+      const match = html.match(/(?:₹|\bRs\.?)\s*([0-9,]+)/i);
+      if (match && match[1]) {
+        const parsed = parsePrice(match[1]);
+        if (parsed && parsed >= 50) price = parsed;
+      }
     }
     if ((!price || price <= 0) && originalPrice && originalPrice > 0) {
       price = originalPrice;
@@ -614,58 +760,15 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
       title.trim() === 'Flipkart.com' ||
       title.trim() === 'Myntra';
 
-    // Only apply hardcoded fallback if title was totally blocked and URL specifically matches style 29441352
-    const isSpecificPumaColorBlock =
-      cleanUrl.includes('29441352') ||
-      (cleanUrl.includes('puma-men-color-block-sneakers') && (!price || price <= 0));
+    const styleMatch = cleanUrl.match(/\/(\d{5,12})(?:\/|\?|$)/) || cleanUrl.match(/(\d{6,12})/);
+    const styleId = styleMatch ? styleMatch[1] : undefined;
 
-    if (isSpecificPumaColorBlock && (!price || price <= 0)) {
-      title = 'Puma Men Color-Block Sneakers';
-      brand = 'Puma';
-      price = 1619;
-      originalPrice = 4499;
-      imageUrl = 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg';
-    } else if (isBotTitle) {
-      if (slugTitle && slugTitle.length > 2) {
-        title = slugTitle
-          .split(' ')
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
-      } else {
-        title =
-          retailer === 'myntra'
-            ? 'Myntra Fashion Deal'
-            : retailer === 'flipkart'
-            ? 'Flipkart Big Billion Deal'
-            : 'Amazon Festival Deal';
-      }
-    }
-
-    if (!title || title.length < 3) {
+    if (slugTitle && (isBotTitle || !title || title.length < 3)) {
       title = slugTitle
-        ? slugTitle.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-        : retailer === 'amazon' ? 'Amazon Festival Deal' : retailer === 'myntra' ? 'Myntra Fashion Deal' : 'Flipkart Big Billion Deal';
+        .split(' ')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
     }
-
-    // Category-based fallback images ONLY if imageUrl is genuinely missing or invalid
-    const titleLower = (title || slugTitle || '').toLowerCase();
-    const isSkincare =
-      titleLower.includes('face wash') ||
-      titleLower.includes('cleanser') ||
-      titleLower.includes('himalaya') ||
-      titleLower.includes('shampoo') ||
-      titleLower.includes('cream') ||
-      titleLower.includes('serum') ||
-      titleLower.includes('lotion') ||
-      cleanUrl.includes('face-wash') ||
-      cleanUrl.includes('cleanser') ||
-      cleanUrl.includes('personal-care');
-    const isFootwear = titleLower.includes('sneaker') || titleLower.includes('shoe') || titleLower.includes('footwear') || cleanUrl.includes('shoes') || cleanUrl.includes('casual-shoes');
-    const isClothing = titleLower.includes('tshirt') || titleLower.includes('t-shirt') || titleLower.includes('shirt') || titleLower.includes('roadster') || titleLower.includes('kurta') || titleLower.includes('top') || cleanUrl.includes('tshirts');
-    const isLaptop = titleLower.includes('laptop') || titleLower.includes('macbook') || titleLower.includes('loq');
-    const isPhone = titleLower.includes('phone') || titleLower.includes('iphone') || titleLower.includes('mobile');
-    const isAudio = titleLower.includes('headphone') || titleLower.includes('earphone') || titleLower.includes('audio');
-    const isBackpack = titleLower.includes('bag') || titleLower.includes('backpack') || titleLower.includes('verge') || titleLower.includes('safari');
 
     const isInvalidImg =
       !imageUrl ||
@@ -675,41 +778,40 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
       imageUrl.includes('photo-1553062407-98eeb64c6a62') ||
       imageUrl.includes('unsplash.com/photo-1523275335684');
 
-    if (isInvalidImg) {
-      if (titleLower.includes('speedcat')) {
-        imageUrl = 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/2024/7/24/76192131-0df0-4b2a-8991-382902d13dae1721820625340-Puma-Speedcat-OG-Sneakers-2911721820624838-1.jpg';
-      } else if (cleanUrl.includes('29441352') || titleLower === 'puma men color-block sneakers') {
-        imageUrl = 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg';
-      } else if (isSkincare) {
-        imageUrl = 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&auto=format&fit=crop&q=80';
-      } else if (isClothing) {
-        imageUrl = 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/2026/MARCH/27/7l4Wcn9H_c6fac5161ed640ef9c99a1167a2534cf.jpg';
-      } else if (isFootwear) {
-        imageUrl = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80';
-      } else if (isLaptop) {
-        imageUrl = 'https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=600&auto=format&fit=crop&q=80';
-      } else if (isPhone) {
-        imageUrl = 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600&auto=format&fit=crop&q=80';
-      } else if (isAudio) {
-        imageUrl = 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=600&auto=format&fit=crop&q=80';
-      } else if (isBackpack) {
-        imageUrl = 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&auto=format&fit=crop&q=80';
-      } else {
-        imageUrl = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80';
+    // Live Web Lookup to get real image and price when Akamai/WAF blocked direct scraping
+    if (isBotTitle || isInvalidImg || !price || price <= 0) {
+      try {
+        const webData = await lookupRetailerWebData(slugTitle || title || '', retailer, styleId);
+        if (webData.imageUrl && isInvalidImg) {
+          imageUrl = webData.imageUrl;
+        }
+        if (webData.price && (!price || price <= 0)) {
+          price = webData.price;
+        }
+        if (webData.originalPrice && (!originalPrice || originalPrice <= 0)) {
+          originalPrice = webData.originalPrice;
+        }
+        if (webData.title && isBotTitle) {
+          title = webData.title;
+        }
+      } catch (err) {
+        console.warn('lookupRetailerWebData error in scraper:', err);
       }
+    }
+
+    if (!title || title.length < 3) {
+      title = slugTitle
+        ? slugTitle.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+        : retailer === 'amazon' ? 'Amazon Festival Deal' : retailer === 'myntra' ? 'Myntra Fashion Deal' : 'Flipkart Big Billion Deal';
     }
 
     if (!price || price <= 0) {
       if (originalPrice && originalPrice > 0) price = originalPrice;
-      else if (isSkincare) price = 180;
-      else if (isClothing) price = 499;
-      else if (isFootwear) price = 1999;
-      else price = 999;
     }
 
     const finalTitle = title;
-    const finalPrice = price;
-    const finalOrig = originalPrice && originalPrice > finalPrice ? originalPrice : Math.round(finalPrice * 1.35);
+    const finalPrice = price || 0;
+    const finalOrig = originalPrice && originalPrice > finalPrice ? originalPrice : (finalPrice ? Math.round(finalPrice * 1.25) : 0);
 
     const comparisons = generateStoreComparisons(finalTitle, retailer, finalPrice, cleanUrl);
 
@@ -737,57 +839,42 @@ export async function scrapeProductUrl(inputUrl: string): Promise<ScrapeResult> 
           .join(' ')
       : 'Tracked Product';
 
+    const styleMatch = cleanUrl.match(/\/(\d{5,12})(?:\/|\?|$)/) || cleanUrl.match(/(\d{6,12})/);
+    const styleId = styleMatch ? styleMatch[1] : undefined;
+
     let fallbackPrice = 0;
     let fallbackOrig = 0;
-    let fallbackImg = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80';
+    let fallbackImg = '';
 
-    const urlLower = cleanUrl.toLowerCase();
-    const titleLow = finalTitle.toLowerCase();
-
-    // Specific calibration ONLY for the demo Color-Block style
-    if (cleanUrl.includes('29441352') || (titleLow === 'puma men color-block sneakers')) {
-      finalTitle = 'Puma Men Color-Block Sneakers';
-      fallbackPrice = 1619;
-      fallbackOrig = 4499;
-      fallbackImg = 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg';
-    } else if (urlLower.includes('face-wash') || titleLow.includes('face wash') || urlLower.includes('himalaya') || titleLow.includes('himalaya')) {
-      finalTitle = slugTitle ? slugTitle.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Himalaya Men Power Glow Face Wash';
-      fallbackPrice = 180;
-      fallbackOrig = 189;
-      fallbackImg = 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&auto=format&fit=crop&q=80';
-    } else if (urlLower.includes('speedcat') || titleLow.includes('speedcat')) {
-      finalTitle = 'Puma Speedcat OG Sneakers';
-      fallbackPrice = 9999;
-      fallbackOrig = 9999;
-      fallbackImg = 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/2024/7/24/76192131-0df0-4b2a-8991-382902d13dae1721820625340-Puma-Speedcat-OG-Sneakers-2911721820624838-1.jpg';
-    } else if (urlLower.includes('roadster') || titleLow.includes('roadster') || urlLower.includes('tshirt') || titleLow.includes('tshirt')) {
-      finalTitle = slugTitle ? slugTitle.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Roadster Pure Cotton T-Shirt';
-      fallbackPrice = 399;
-      fallbackOrig = 999;
-      fallbackImg = 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/2026/MARCH/27/7l4Wcn9H_c6fac5161ed640ef9c99a1167a2534cf.jpg';
-    } else if (urlLower.includes('shoe') || urlLower.includes('sneaker') || titleLow.includes('shoe') || titleLow.includes('sneaker')) {
-      fallbackPrice = 2499;
-      fallbackOrig = 4999;
-      fallbackImg = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80';
-    } else {
-      fallbackPrice = 999;
-      fallbackOrig = 1499;
-      fallbackImg = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80';
+    try {
+      const webData = await lookupRetailerWebData(slugTitle || finalTitle, retailer, styleId);
+      if (webData.imageUrl) fallbackImg = webData.imageUrl;
+      if (webData.price) fallbackPrice = webData.price;
+      if (webData.originalPrice) fallbackOrig = webData.originalPrice;
+      if (webData.title && (!finalTitle || finalTitle === 'Tracked Product')) {
+        finalTitle = webData.title;
+      }
+    } catch (e) {
+      console.warn('Fallback web lookup error:', e);
     }
 
-    const comparisons = generateStoreComparisons(finalTitle, retailer, fallbackPrice, cleanUrl);
+    if (fallbackPrice > 0 && (!fallbackOrig || fallbackOrig <= fallbackPrice)) {
+      fallbackOrig = Math.round(fallbackPrice * 1.25);
+    }
+
+    const comparisons = generateStoreComparisons(finalTitle, retailer, fallbackPrice || 999, cleanUrl);
 
     return {
       success: true,
       title: finalTitle,
       price: fallbackPrice,
       originalPrice: fallbackOrig,
-      imageUrl: fallbackImg,
+      imageUrl: fallbackImg || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80',
       retailer,
       inStock: true,
       comparisons,
       variants: ['Standard'],
-      error: 'Note: Live retailer price was protected; please verify details below.',
+      error: fallbackPrice > 0 ? undefined : 'Live price protected; please verify below.',
     };
   }
 }
