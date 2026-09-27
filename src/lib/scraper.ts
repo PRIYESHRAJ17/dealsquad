@@ -236,8 +236,10 @@ export async function lookupRetailerWebData(
 
   // 2. DuckDuckGo Text Snippet Search for Price & MRP
   const searchQueries: string[] = [];
-  if (retailer === 'myntra' && styleId) searchQueries.push(`${styleId} myntra`);
+  searchQueries.push(`${cleanQuery} ${retailer === 'myntra' ? 'price myntra' : retailer === 'flipkart' ? 'price flipkart' : 'price'}`);
+  if (retailer === 'myntra' && styleId) searchQueries.push(`${styleId} price myntra`);
   searchQueries.push(`${cleanQuery} ${retailer === 'myntra' ? 'myntra' : retailer === 'flipkart' ? 'flipkart' : ''}`);
+  if (retailer === 'myntra' && styleId) searchQueries.push(`${styleId} myntra`);
 
   for (const q of searchQueries) {
     if (price && price > 0) break;
