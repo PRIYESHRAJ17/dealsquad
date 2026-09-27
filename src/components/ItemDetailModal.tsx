@@ -226,8 +226,12 @@ export function ItemDetailModal({
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   const t = (item.title || '').toLowerCase();
-                  if (t.includes('puma')) {
+                  if (t.includes('speedcat')) {
+                    target.src = 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/2024/7/24/76192131-0df0-4b2a-8991-382902d13dae1721820625340-Puma-Speedcat-OG-Sneakers-2911721820624838-1.jpg';
+                  } else if (t.includes('puma') && (t.includes('color') || t.includes('block'))) {
                     target.src = 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg';
+                  } else if (t.includes('tshirt') || t.includes('t-shirt') || t.includes('shirt') || t.includes('roadster')) {
+                    target.src = 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/2026/MARCH/27/7l4Wcn9H_c6fac5161ed640ef9c99a1167a2534cf.jpg';
                   } else if (t.includes('shoe') || t.includes('sneaker') || t.includes('footwear')) {
                     target.src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80';
                   } else {

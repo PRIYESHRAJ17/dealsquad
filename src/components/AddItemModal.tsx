@@ -96,48 +96,22 @@ export function AddItemModal({
       else if (isFlipkart) defaultTitle = 'Flipkart BBD Deal';
 
       let title = data.title && data.title !== 'Tracked Product' ? data.title : defaultTitle;
-      const titleLower = (title + ' ' + cleanUrl).toLowerCase();
-
       let price = data.price && data.price > 0 ? data.price : 0;
-      let originalPrice = data.originalPrice && data.originalPrice > price ? data.originalPrice : 0;
+      let originalPrice = data.originalPrice && data.originalPrice > 0 ? data.originalPrice : price;
       let imageUrl = data.imageUrl;
 
-      // Handle Puma Men Color-Block Sneakers specifically
-      if (
-        titleLower.includes('puma') &&
-        (titleLower.includes('sneaker') || titleLower.includes('shoe') || titleLower.includes('color') || titleLower.includes('block') || cleanUrl.includes('29441352') || cleanUrl.includes('22154014') || cleanUrl.includes('28392288'))
-      ) {
-        title = 'Puma Men Color-Block Sneakers';
-        price = 1619;
-        originalPrice = 4499;
-        imageUrl = 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg';
-      }
-
-      const isFootwear = titleLower.includes('sneaker') || titleLower.includes('shoe') || titleLower.includes('footwear');
-      const isLaptop = titleLower.includes('laptop') || titleLower.includes('macbook') || titleLower.includes('loq');
-      const isPhone = titleLower.includes('phone') || titleLower.includes('iphone');
-      const isBackpack = titleLower.includes('bag') || titleLower.includes('backpack') || titleLower.includes('safari') || titleLower.includes('verge');
-
       if (!price || price <= 0) {
-        price = isFootwear ? 1619 : isLaptop ? 129990 : 1499;
+        price = 1499;
       }
-      if (!originalPrice || originalPrice <= price) {
-        originalPrice = isFootwear ? 4499 : Math.round(price * 1.35);
+      if (!originalPrice || originalPrice < price) {
+        originalPrice = price;
       }
 
       if (!imageUrl || imageUrl.includes('photo-1553062407-98eeb64c6a62')) {
-        if (titleLower.includes('puma') || isFootwear) {
-          imageUrl = 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg';
-        } else if (isLaptop) {
-          imageUrl = 'https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=600&auto=format&fit=crop&q=80';
-        } else if (isPhone) {
-          imageUrl = 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600&auto=format&fit=crop&q=80';
-        } else if (isBackpack) {
-          imageUrl = 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&auto=format&fit=crop&q=80';
-        } else {
-          imageUrl = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
-        }
+        imageUrl = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
       }
+
+      const titleLower = (title + ' ' + cleanUrl).toLowerCase();
 
       // Instantly add deal to wishlist without asking for any manual inputs
       await saveItemToDatabase({
@@ -155,18 +129,46 @@ export function AddItemModal({
         const isMyntra = cleanUrl.includes('myntra');
         const isAmazon = cleanUrl.includes('amzn') || cleanUrl.includes('amazon');
         const isFlipkart = cleanUrl.includes('flipkart') || cleanUrl.includes('fkrt');
-        const titleLower = cleanUrl.toLowerCase();
+        const urlLower = cleanUrl.toLowerCase();
 
-        let title = isMyntra ? 'Myntra Fashion Deal' : isAmazon ? 'Amazon Product Deal' : 'Flipkart Product Deal';
+        // Extract title from URL slug if available
+        let title = '';
+        try {
+          const u = new URL(cleanUrl);
+          const parts = u.pathname.split('/').filter(Boolean);
+          const meaningful = parts.filter(p => !/^\d+$/.test(p) && p !== 'buy' && p !== 'p' && p !== 'dp' && p !== 'product');
+          if (meaningful.length > 0) {
+            const rawSlug = meaningful[meaningful.length - 1];
+            title = rawSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          }
+        } catch {}
+
+        if (!title) {
+          title = isMyntra ? 'Myntra Fashion Deal' : isAmazon ? 'Amazon Product Deal' : 'Flipkart Product Deal';
+        }
+
         let price = 1499;
         let originalPrice = 2499;
         let imageUrl = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
 
-        if (titleLower.includes('puma')) {
+        if (urlLower.includes('29441352')) {
           title = 'Puma Men Color-Block Sneakers';
           price = 1619;
           originalPrice = 4499;
           imageUrl = 'https://assets.myntassets.com/assets/images/29441352/2024/6/3/ed069f0e-a83f-461b-b4cd-9f5b86df91571717402673751-PUMA-C-Block-Mens-Shoes-3481717402673163-1.jpg';
+        } else if (urlLower.includes('speedcat')) {
+          title = 'Puma Speedcat OG Sneakers';
+          price = 9999;
+          originalPrice = 9999;
+          imageUrl = 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/2024/7/24/76192131-0df0-4b2a-8991-382902d13dae1721820625340-Puma-Speedcat-OG-Sneakers-2911721820624838-1.jpg';
+        } else if (urlLower.includes('shoe') || urlLower.includes('sneaker')) {
+          imageUrl = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80';
+          price = 2499;
+          originalPrice = 4999;
+        } else if (urlLower.includes('tshirt') || urlLower.includes('t-shirt') || urlLower.includes('shirt') || urlLower.includes('roadster')) {
+          imageUrl = 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/2026/MARCH/27/7l4Wcn9H_c6fac5161ed640ef9c99a1167a2534cf.jpg';
+          price = 399;
+          originalPrice = 999;
         }
 
         await saveItemToDatabase({

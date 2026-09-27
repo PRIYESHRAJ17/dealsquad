@@ -606,12 +606,12 @@ class Database {
     data.items = data.items.map((item) => {
       const titleLower = (item.title || '').toLowerCase();
       const urlLower = (item.url || '').toLowerCase();
-      const isPuma =
-        titleLower.includes('puma') ||
-        urlLower.includes('puma') ||
-        (urlLower.includes('myntra') && (item.currentPrice === 1399 || item.imageUrl?.includes('photo-1553062407-98eeb64c6a62')));
+      const isSpecificColorBlock =
+        item.id === 'item-7' ||
+        urlLower.includes('29441352') ||
+        item.title === 'Puma Men Color-Block Sneakers';
 
-      if (isPuma) {
+      if (isSpecificColorBlock) {
         if (
           item.currentPrice !== 1619 ||
           item.originalPrice !== 4499 ||
@@ -847,12 +847,13 @@ class Database {
         retailer = 'flipkart';
       }
 
-      // Calibrate Puma Sneakers (User Req: Myntra Puma Men Color-Block Sneakers, ₹1,619 current, ₹4,499 MRP, 64% off)
-      if (
-        item.title?.toLowerCase().includes('puma') ||
-        item.title?.toLowerCase().includes('maintenance') ||
-        item.url?.toLowerCase().includes('myntra')
-      ) {
+      // Calibrate Puma Sneakers (ONLY for the specific item-7 Puma Color-Block sneakers, NEVER other Puma/Myntra items)
+      const isSpecificColorBlock =
+        item.id === 'item-7' ||
+        item.url?.toLowerCase().includes('29441352') ||
+        item.title === 'Puma Men Color-Block Sneakers';
+
+      if (isSpecificColorBlock) {
         title = 'Puma Men Color-Block Sneakers';
         cur = 1619;
         orig = 4499;
