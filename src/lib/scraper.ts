@@ -160,9 +160,9 @@ export async function lookupRetailerWebData(
   const cleanQuery = productQuery.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
   if (!cleanQuery) return {};
 
-  // 1. DuckDuckGo Image Search for real retailer photo
+  // 1. DuckDuckGo Image Search for real retailer photo (unquoted for maximum match accuracy)
   try {
-    const query = encodeURIComponent(`"${cleanQuery}" ${retailer === 'myntra' ? 'myntra' : retailer === 'flipkart' ? 'flipkart' : ''}`);
+    const query = encodeURIComponent(`${cleanQuery} ${retailer === 'myntra' ? 'myntra' : retailer === 'flipkart' ? 'flipkart' : ''}`);
     const tokenRes = await fetch(`https://duckduckgo.com/?q=${query}`, {
       headers: {
         'User-Agent':
@@ -226,7 +226,7 @@ export async function lookupRetailerWebData(
     console.warn('Web image lookup error:', err);
   }
 
-  // Clean Myntra CDN URLs to high-res
+  // Clean Myntra CDN URLs to high-res 1440x1080
   if (imageUrl && imageUrl.includes('myntassets.com')) {
     imageUrl = imageUrl.replace(/h_\d+,w_\d+[^/]*\//, '');
     if (!imageUrl.includes('h_1440')) {
@@ -235,37 +235,100 @@ export async function lookupRetailerWebData(
   }
 
   // 2. DuckDuckGo Text Snippet Search for Price & MRP
-  try {
-    const textQuery = encodeURIComponent(`"${cleanQuery}" ${retailer === 'myntra' ? 'myntra' : retailer === 'flipkart' ? 'flipkart' : ''}`);
-    const textRes = await fetch(`https://html.duckduckgo.com/html/?q=${textQuery}`, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-      },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (textRes.ok) {
-      const html = await textRes.text();
-      const snippets = html.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g) || [];
-      for (const s of snippets) {
-        const text = s.replace(/<[^>]+>/g, '').trim();
-        const matches = text.match(/(?:Rs\.?|₹)\s*([0-9,]+)/gi);
-        if (matches && matches.length > 0) {
-          const nums = matches
-            .map((m) => parseInt(m.replace(/[^\d]/g, ''), 10))
-            .filter((n) => n > 50 && n < 1000000);
-          if (nums.length === 1 && !price) {
-            price = nums[0];
-          } else if (nums.length >= 2) {
-            nums.sort((a, b) => a - b);
-            if (!price) price = nums[0];
-            if (!originalPrice) originalPrice = nums[nums.length - 1];
+  const searchQueries: string[] = [];
+  if (retailer === 'myntra' && styleId) searchQueries.push(`${styleId} myntra`);
+  searchQueries.push(`${cleanQuery} ${retailer === 'myntra' ? 'myntra' : retailer === 'flipkart' ? 'flipkart' : ''}`);
+
+  for (const q of searchQueries) {
+    if (price && price > 0) break;
+    try {
+      const textRes = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (textRes.ok) {
+        const html = await textRes.text();
+        const rawSnippets = html.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g) || [];
+        const snippets = rawSnippets.map((s) => s.replace(/<[^>]+>/g, '').trim());
+
+        // Strategy A: Match Style ID with "at Rs. X"
+        if (styleId) {
+          for (const text of snippets) {
+            if (text.includes(styleId)) {
+              const atMatch = text.match(/(?:at|price:?)\s*(?:Rs\.?|₹)?\s*([0-9,]+)/i);
+              if (atMatch) {
+                const val = parseInt(atMatch[1].replace(/,/g, ''), 10);
+                if (val >= 90 && val <= 500000) {
+                  price = val;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        // Strategy B: "at Rs. X" in any snippet
+        if (!price) {
+          for (const text of snippets) {
+            const atMatch = text.match(/(?:at|only at|buy .* at)\s*(?:Rs\.?|₹)\s*([0-9,]+)/i);
+            if (atMatch) {
+              const val = parseInt(atMatch[1].replace(/,/g, ''), 10);
+              if (val >= 90 && val <= 500000) {
+                price = val;
+                break;
+              }
+            }
+          }
+        }
+
+        // Strategy C: "Rs. X Rs. Y (Z% OFF)"
+        if (!price) {
+          for (const text of snippets) {
+            const offMatch = text.match(/(?:Rs\.?|₹)\s*([0-9,]+)\s+(?:Rs\.?|₹)\s*([0-9,]+)\s*\(\d+%\s*OFF\)/i);
+            if (offMatch) {
+              const p1 = parseInt(offMatch[1].replace(/,/g, ''), 10);
+              const p2 = parseInt(offMatch[2].replace(/,/g, ''), 10);
+              if (p1 >= 90 && p2 >= 90) {
+                price = Math.min(p1, p2);
+                originalPrice = Math.max(p1, p2);
+                break;
+              }
+            }
+          }
+        }
+
+        // Strategy D: All rupee amounts (excluding promotional flat 800)
+        if (!price) {
+          for (const text of snippets) {
+            const cleanedSnippet = text
+              .replace(/flat\s+(?:Rs\.?|₹)\s*\d+\s+off/gi, '')
+              .replace(/orders?\s+above\s+(?:Rs\.?|₹)?\s*\d+/gi, '')
+              .replace(/coupon[^\n\r.]*/gi, '');
+
+            const matches = cleanedSnippet.match(/(?:Rs\.?|₹)\s*([0-9,]+)/gi);
+            if (matches && matches.length > 0) {
+              const nums = matches
+                .map((m) => parseInt(m.replace(/[^\d]/g, ''), 10))
+                .filter((n) => n >= 90 && n <= 500000 && n !== 800);
+              if (nums.length === 1) {
+                price = nums[0];
+                break;
+              } else if (nums.length >= 2) {
+                nums.sort((a, b) => a - b);
+                price = nums[0];
+                originalPrice = nums[nums.length - 1];
+                break;
+              }
+            }
           }
         }
       }
+    } catch (err) {
+      console.warn('Web snippet price lookup error:', err);
     }
-  } catch (err) {
-    console.warn('Web snippet price lookup error:', err);
   }
 
   if (title) {
