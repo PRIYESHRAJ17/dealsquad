@@ -37,6 +37,7 @@ interface ItemDetailModalProps {
   onSimulatePriceDrop: (itemId: string, percentage: number) => void;
   onAddPricePoint: (itemId: string, price: number, note?: string) => void;
   onCalibratePrices?: (itemId: string, data: { lowestPrice: number; averagePrice: number; highestPrice: number }) => void;
+  onUpdatePrice?: (itemId: string, currentPrice: number, originalPrice?: number) => void;
   onDeleteItem: (itemId: string) => void;
 }
 
@@ -55,6 +56,7 @@ export function ItemDetailModal({
   onSimulatePriceDrop,
   onAddPricePoint,
   onCalibratePrices,
+  onUpdatePrice,
   onDeleteItem,
 }: ItemDetailModalProps) {
   if (!isOpen || !item) return null;
@@ -68,6 +70,21 @@ export function ItemDetailModal({
   const [customPriceNote, setCustomPriceNote] = useState('');
   const [showPriceForm, setShowPriceForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Quick Inline Price Editing State
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [editCurrentPrice, setEditCurrentPrice] = useState(String(item.currentPrice));
+  const [editOriginalPrice, setEditOriginalPrice] = useState(String(item.originalPrice || ''));
+
+  const handleSavePrice = (e: React.FormEvent) => {
+    e.preventDefault();
+    const c = parseFloat(editCurrentPrice);
+    const o = parseFloat(editOriginalPrice);
+    if (!isNaN(c) && c > 0 && onUpdatePrice) {
+      onUpdatePrice(item.id, c, !isNaN(o) && o > 0 ? o : undefined);
+      setIsEditingPrice(false);
+    }
+  };
 
   // Rufus / True Price Calibration State
   const [showCalibrate, setShowCalibrate] = useState(false);
@@ -233,7 +250,66 @@ export function ItemDetailModal({
                       </span>
                     </>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingPrice(!isEditingPrice)}
+                    className="ml-auto px-2.5 py-1 text-xs font-bold rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                    title="Quickly adjust deal price or MRP if retailer shows a different rate or variant"
+                  >
+                    <span>✏️</span>
+                    <span>{isEditingPrice ? 'Cancel' : 'Edit Rate / Price'}</span>
+                  </button>
                 </div>
+
+                {/* Inline Price Correction Form */}
+                {isEditingPrice && (
+                  <form onSubmit={handleSavePrice} className="mb-4 p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 space-y-3">
+                    <div className="text-xs font-bold text-indigo-900 dark:text-indigo-200 flex items-center justify-between">
+                      <span>Adjust Store Selling Rate & MRP:</span>
+                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-normal">Instant sync across DealSquad</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          Current Deal Price (₹)
+                        </label>
+                        <input
+                          type="number"
+                          value={editCurrentPrice}
+                          onChange={(e) => setEditCurrentPrice(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-black text-slate-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          Original MRP (₹)
+                        </label>
+                        <input
+                          type="number"
+                          value={editOriginalPrice}
+                          onChange={(e) => setEditOriginalPrice(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-semibold text-slate-700 dark:text-slate-300"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPrice(false)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition"
+                      >
+                        Save Rates
+                      </button>
+                    </div>
+                  </form>
+                )}
 
                 {/* 3-Price Snapshot Matrix (User req: Show lowest & average & current price all 3) */}
                 <div className="p-3 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">

@@ -438,6 +438,29 @@ export default function DashboardPage() {
     }
   };
 
+  // Update Deal Price / Rates directly
+  const handleUpdatePrice = async (itemId: string, currentPrice: number, originalPrice?: number) => {
+    try {
+      const res = await fetch(`/api/items/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPrice, originalPrice }),
+      });
+      const data = await res.json();
+      if (data.item) {
+        setItems((prev) => prev.map((i) => (i.id === itemId ? data.item : i)));
+        if (activeItem && activeItem.id === itemId) setActiveItem(data.item);
+        showToast(
+          `Price set to ₹${currentPrice.toLocaleString('en-IN')}`,
+          originalPrice ? `MRP ₹${originalPrice.toLocaleString('en-IN')}` : 'Rates synchronized',
+          'success'
+        );
+      }
+    } catch (err) {
+      console.error('Error updating price:', err);
+    }
+  };
+
   // Calibrate Rufus / True Historical Prices
   const handleCalibratePrices = async (
     itemId: string,
@@ -885,6 +908,7 @@ export default function DashboardPage() {
         onSimulatePriceDrop={handleSimulatePriceDrop}
         onAddPricePoint={handleAddPricePoint}
         onCalibratePrices={handleCalibratePrices}
+        onUpdatePrice={handleUpdatePrice}
         onDeleteItem={handleDeleteItem}
       />
 
